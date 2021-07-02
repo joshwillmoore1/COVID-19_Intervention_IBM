@@ -1,5 +1,7 @@
 # COVID-19_Intervention_IBM
 
+Link to the applet: https://bit.ly/CV19_INTER_IBM
+
 <h2>The model</h2>
 This application uses a stochastic agent-based model to simulate infection transimission of COVID-19 coupled with various non-pharmaceutical interventions in educational settings. The employed model allows for the agents to be grouped together to simulate the affect of close range contact on transmission and various isolation policies, for example, the subgroups can be considered as tables groups in a classroom or classmembers within a school of agents. In addition, the software allows for control of agent mixing and testing frequencies over a characteristic week. For more details on the agent-based infection transmission model, see the reference text which can be found [here.](https://www.medrxiv.org/content/10.1101/2021.03.08.21253122v1)
 
