@@ -337,7 +337,7 @@ shinyServer(function(input, output, session) {
            Irb <- sevenDayRollingPrev;
         }
         else{
-          R = input$Rlider/SocialDistancingModifier; #R number
+          R = input$Rlider; #R number
           Irb = input$PrevSlider; #Background prevalence
         }
         
@@ -531,55 +531,42 @@ shinyServer(function(input, output, session) {
                 
                 # if active, return all recovered students
                 if (RecoveryBool == 1){
+                    RecoveredIndx = which(CountDownRecovery <= 0, TRUE)
                     
-                    for (l in 1:Groups){
-                        for (p in 1:SubgroupSize){
-                            
-                            if (ActivePop[l,p] == 6 & CountDownRecovery[l,p] <=0){
-                                ActivePop[l,p] = 2;
-                                CountDownDetection[l,p] = Inf;
-                                CountDownInfectious[l,p] = Inf;
-                                CountDownRecovery[l,p] = Inf;
-                            }
-                            else if (ActivePop[l,p] == 1 & CountDownRecovery[l,p] <=0){
-                                ActivePop[l,p] = 2;
-                                CountDownDetection[l,p] = Inf;
-                                CountDownInfectious[l,p] = Inf;
-                                CountDownRecovery[l,p] = Inf;
-                            }
-                            else if (ActivePop[l,p] == 3 & CountDownRecovery[l,p] <=0){
-                                ActivePop[l,p] = 0;
-                                CountDownDetection[l,p] = Inf;
-                                CountDownInfectious[l,p] = Inf;
-                                CountDownRecovery[l,p] = Inf;
-                            }
-                            else if (ActivePop[l,p] == 4 & CountDownRecovery[l,p] <=0){
-                                ActivePop[l,p] = 2;
-                                CountDownDetection[l,p] = Inf;
-                                CountDownInfectious[l,p] = Inf;
-                                CountDownRecovery[l,p] = Inf;
-                            }
-                            else if (ActivePop[l,p] == 5 & CountDownRecovery[l,p] <=0){
-                                ActivePop[l,p] = 2;
-                                CountDownDetection[l,p] = Inf;
-                                CountDownInfectious[l,p] = Inf;
-                                CountDownRecovery[l,p] = Inf;
-                            }
+                    if (is.numeric(nrow(RecoveredIndx))){
+                      if (nrow(RecoveredIndx) > 0 ){
+                        for (k in 1:nrow(RecoveredIndx)){
                           
-                          else if (ActivePop[l,p] == 2 & CountDownRecovery[l,p] <=0){
-                            ActivePop[l,p] = 2;
-                            CountDownDetection[l,p] = Inf;
-                            CountDownInfectious[l,p] = Inf;
-                            CountDownRecovery[l,p] = Inf;
+                          if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 6){
+                            ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 2;
+                          } 
+                          else if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 1){
+                            ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 2;
+                          }
+                          else if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 3){
+                            ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 0;
+                          }
+                          else if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 4){
+                            ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 2;
+                          }
+                          else if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 5){
+                            ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 2;
+                          }
+                          else if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 2){
+                            ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 2;
+                          }
+                          else if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 0){
+                            ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 0;
                           }
                           
-                          else if (ActivePop[l,p] == 0 & CountDownRecovery[l,p] <=0){
-                            ActivePop[l,p] = 0;
-                            CountDownDetection[l,p] = Inf;
-                            CountDownInfectious[l,p] = Inf;
-                            CountDownRecovery[l,p] = Inf;
-                          }
+                          CountDownDetection[RecoveredIndx[k,1],RecoveredIndx[k,2]] = Inf;
+                          CountDownInfectious[RecoveredIndx[k,1],RecoveredIndx[k,2]] = Inf;
+                          CountDownRecovery[RecoveredIndx[k,1],RecoveredIndx[k,2]] = Inf;
+                          
                         }
+                        
+                      }
+                      
                     }
                 }
                 
