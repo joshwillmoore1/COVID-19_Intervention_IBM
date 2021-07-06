@@ -5,20 +5,18 @@ library(numbers)
 library(htmltools)
 library(writexl)
 library(shinyBS)
-
+library(openxlsx)
+library(thematic)
 
 
 shinyServer(function(input, output, session) {
-    
-    #bslib::bs_themer()
-    thematic::thematic_shiny()
   
-  showModal(modalDialog(title = "Disclaimer",p("Any results extracted from this applet are purely theoretical and should not be used solely in any decision making process. We offer no warranty, nor guarantee for the performance, nor fitness of purpose of the software. The applet should be used in conjunction with a trained virologist’s expertise and the reference text which can be found" ,
-                                               a("here.",href = "https://www.medrxiv.org/content/10.1101/2021.03.08.21253122v1"),
-                                               " The source code can be found",a("here",href = "https://github.com/joshwillmoore1/COVID-19_Intervention_IBM"), 
-                                               " as is offered under the MIT License. By using the software you are explicitly accepting these terms of service."), 
+  #bslib::bs_themer()
+  thematic_shiny()
+  
+  showModal(modalDialog(title = "Disclaimer", DisclaimerText, 
                         easyClose = FALSE, fade = TRUE,footer = modalButton("Accept & continue")))
-    
+  
     observe({
         session$setCurrentTheme(
             if (isTRUE(input$dark_mode)) dark else light
@@ -29,6 +27,8 @@ shinyServer(function(input, output, session) {
       updateSliderInput(session, "SubgroupSlider",max = input$NtotSlider ,min = 1)
                           
    })
+   
+   shinyBS::addPopover(session, "NumRecoveriesPlot", "Data",content = paste0("HelloWorld") )
    
    observeEvent(input$UseDataRCheck, {
      if (input$UseDataRCheck == TRUE){
@@ -51,9 +51,11 @@ shinyServer(function(input, output, session) {
    })
    
    storingValues <- reactiveValues()
-   storingValues$SummaryResults = matrix(,,5,dimnames = list(NULL,c("Simulation number", "Mean total infections", "Mean total recoveries","Percentage of total outbreaks (%)","Mean absence-infection ratio")))
-   storingValues$count_check = 0;
+   storingValues$SummaryResults = matrix(,,5,dimnames = list(NULL,c("Simulation ID", "Mean total infections", "Mean total recoveries","Percentage of total outbreaks (%)","Mean absence-infection ratio")))
+   storingValues$count_check = as.integer(0);
    
+   SimulationExport <-reactiveValues()
+   SimulationExport$SimulationExportDataStructure <-list()
    
    #plot the total number of infections
    output$TotInfections <- renderPlot({
@@ -68,10 +70,34 @@ shinyServer(function(input, output, session) {
              panel.background = element_blank()) + xlab("Time (Days)") + ylab("Total mean infections (%)") + xlim(1,28) + ylim(0,100)
    })
    
+   #plot the total number of infections
+   output$TotInfections_DM <- renderPlot({
+     totInf <- data.frame(NaN,NaN)
+     
+     ggplot(totInf, aes(x=NaN, y=NaN)) +
+       
+       theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+             panel.grid.major = element_blank(),
+             panel.grid.minor = element_blank(),
+             panel.border = element_blank(),
+             panel.background = element_blank()) + xlab("Time (Days)") + ylab("Total mean infections (%)") + xlim(1,28) + ylim(0,100)
+   })
    
    
    #plot the total number of active infections
    output$NumActiveInfections <- renderPlot({
+     totInf <- data.frame(NaN,NaN)
+     
+     ggplot(totInf, aes(x=NaN, y=NaN)) +
+       theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+             panel.grid.major = element_blank(),
+             panel.grid.minor = element_blank(),
+             panel.border = element_blank(),
+             panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active infections (%)") + xlim(1,28) + ylim(0,100)
+   })
+   
+   #plot the total number of active infections
+   output$NumActiveInfections_DM <- renderPlot({
      totInf <- data.frame(NaN,NaN)
      
      ggplot(totInf, aes(x=NaN, y=NaN)) +
@@ -95,7 +121,32 @@ shinyServer(function(input, output, session) {
      
    })
    
+   output$NumRecoveriesPlot_DM <- renderPlot({
+     totInf <- data.frame(NaN,NaN)
+     
+     ggplot(totInf, aes(x=NaN, y=NaN)) +
+       
+       theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+             panel.grid.major = element_blank(),
+             panel.grid.minor = element_blank(),
+             panel.border = element_blank(),
+             panel.background = element_blank()) + xlab("Total mean number of infections") + ylab("Total mean number of absent days")  + xlim(1,28) + ylim(0,30)
+     
+   })
+   
    output$NumActiveRecoveriesPlot <- renderPlot({
+     totInf <- data.frame(NaN,NaN)
+     
+     ggplot(totInf, aes(x=NaN, y=NaN)) +
+       
+       theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+             panel.grid.major = element_blank(),
+             panel.grid.minor = element_blank(),
+             panel.border = element_blank(),
+             panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") + xlim(1,28) + ylim(0,100)
+   })
+   
+   output$NumActiveRecoveriesPlot_DM <- renderPlot({
      totInf <- data.frame(NaN,NaN)
      
      ggplot(totInf, aes(x=NaN, y=NaN)) +
@@ -170,12 +221,26 @@ shinyServer(function(input, output, session) {
      updateCheckboxInput(session, "MaskCheck" ,value = FALSE)
      updateCheckboxInput(session, "InitTestCheck" ,value = FALSE)
      
+     updateTextInput(session, "SimIDinput", value = "")
+     
      #grouped checkboxes
      updateCheckboxGroupInput(session, "MixDaysCheck", selected = c("Mon","Tue","Wed","Thur","Fri"))
      updateCheckboxGroupInput(session, "TestDaysCheck", selected = c("Mon","Fri"))
      
      #plot the total number of infections
      output$TotInfections <- renderPlot({
+       totInf <- data.frame(NaN,NaN)
+       
+       ggplot(totInf, aes(x=NaN, y=NaN)) +
+         
+         theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+               panel.grid.major = element_blank(),
+               panel.grid.minor = element_blank(),
+               panel.border = element_blank(),
+               panel.background = element_blank()) + xlab("Time (Days)") + ylab("Total mean infections (%)") + xlim(1,28) + ylim(0,100)
+     })
+     
+     output$TotInfections_DM <- renderPlot({
        totInf <- data.frame(NaN,NaN)
        
        ggplot(totInf, aes(x=NaN, y=NaN)) +
@@ -201,7 +266,32 @@ shinyServer(function(input, output, session) {
                panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active infections (%)") + xlim(1,28) + ylim(0,100)
      })
      
+     #plot the total number of active infections
+     output$NumActiveInfections_DM <- renderPlot({
+       totInf <- data.frame(NaN,NaN)
+       
+       ggplot(totInf, aes(x=NaN, y=NaN)) +
+         theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+               panel.grid.major = element_blank(),
+               panel.grid.minor = element_blank(),
+               panel.border = element_blank(),
+               panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active infections (%)") + xlim(1,28) + ylim(0,100)
+     })
+     
      output$NumRecoveriesPlot <- renderPlot({
+       totInf <- data.frame(NaN,NaN)
+       
+       ggplot(totInf, aes(x=NaN, y=NaN)) +
+         
+         theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+               panel.grid.major = element_blank(),
+               panel.grid.minor = element_blank(),
+               panel.border = element_blank(),
+               panel.background = element_blank()) + xlab("Total mean number of infections") + ylab("Total mean number of absent days")  + xlim(1,28) + ylim(0,30)
+       
+     })
+     
+     output$NumRecoveriesPlot_DM <- renderPlot({
        totInf <- data.frame(NaN,NaN)
        
        ggplot(totInf, aes(x=NaN, y=NaN)) +
@@ -226,8 +316,21 @@ shinyServer(function(input, output, session) {
                panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") + xlim(1,28) + ylim(0,100)
      })
      
+     output$NumActiveRecoveriesPlot_DM <- renderPlot({
+       totInf <- data.frame(NaN,NaN)
+       
+       ggplot(totInf, aes(x=NaN, y=NaN)) +
+         
+         theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+               panel.grid.major = element_blank(),
+               panel.grid.minor = element_blank(),
+               panel.border = element_blank(),
+               panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") + xlim(1,28) + ylim(0,100)
+     })
+     
+      SimulationExportDataStructure <- list()
       storingValues$count_check = 0;
-      storingValues$SummaryResults = matrix(,,5,dimnames = list(NULL,c("Simulation number", "Mean total infections", "Mean total recoveries","Percentage of total outbreaks (%)","Mean absence-infection ratio")))
+      storingValues$SummaryResults = matrix(,,5,dimnames = list(NULL,c("Simulation ID", "Mean total infections", "Mean total recoveries","Percentage of total outbreaks (%)","Mean absence-infection ratio")))
       output$SummaryTable <- renderTable(as.data.frame(storingValues$SummaryResults), align = c("c"), striped = FALSE, digits = 2)
      
      output$SaveResultsButton<- downloadHandler(
@@ -264,7 +367,7 @@ shinyServer(function(input, output, session) {
         #Parameter definitions
         
         #round the groupsize to a divisor of Ntot
-        possibleValues = divisors(input$NtotSlider)
+        possibleValues = numbers::divisors(input$NtotSlider)
         currentValue = input$SubgroupSlider
         closestValueInd = which.min(abs(possibleValues-currentValue))
         updateSliderInput(session, "SubgroupSlider",max = input$NtotSlider ,min = 1,value = possibleValues[closestValueInd])
@@ -993,9 +1096,22 @@ shinyServer(function(input, output, session) {
           }
         }
         
-        storingValues$count_check = storingValues$count_check + 1;
-        storingValues$SummaryResults = rbind(storingValues$SummaryResults,c(storingValues$count_check,mean(FinalTotInfections), mean(FinalTotRecoveries),(NumberOfTotalOutbreaks/NoS)*100,  round(mean(AbsentDaysInfectionRatio),digits = 2) ))
-
+        storingValues$count_check <- as.integer(storingValues$count_check + 1);
+        
+        if (input$SimIDinput == ""){
+        storingValues$SummaryResults = rbind(storingValues$SummaryResults,c(as.character(storingValues$count_check),round(mean(FinalTotInfections),digits = 2), round(mean(FinalTotRecoveries),digits = 2), 
+                                                                            formatC( round((NumberOfTotalOutbreaks/NoS)*100,digits = 2), format='f', digits=2 ),  round(mean(AbsentDaysInfectionRatio),digits = 2) ))
+        } else{
+          storingValues$SummaryResults = rbind(storingValues$SummaryResults,c(input$SimIDinput,round(mean(FinalTotInfections),digits = 2), round(mean(FinalTotRecoveries),digits = 2), 
+                                                                              formatC( round((NumberOfTotalOutbreaks/NoS)*100,digits = 2), format='f', digits=2 ),  round(mean(AbsentDaysInfectionRatio),digits = 2) ))
+          
+          
+        }
+        
+        #Data for export
+        CurrentSimData <- list(ParameterValues,Frequencies,Data_output)
+        SimulationExport$SimulationExportDataStructure[[storingValues$count_check]] <- CurrentSimData
+        
         MeanTotalInfections=colMeans(Ntot-HealthyPeople);
         MeanTotalInfections_Pos95 =  MeanTotalInfections + z_value*apply((Ntot-HealthyPeople),2,sd)
         MeanTotalInfections_Neg95 =  MeanTotalInfections - z_value*apply((Ntot-HealthyPeople),2,sd)
@@ -1060,7 +1176,8 @@ shinyServer(function(input, output, session) {
         MeanNumberOfCasesDetected_Pos95 = (MeanNumberOfCasesDetected_Pos95/Ntot)*100
         MeanNumberOfCasesDetected_Neg95 = (MeanNumberOfCasesDetected_Neg95/Ntot)*100
         
-        
+
+       
         #plot the total number of infections
         output$TotInfections <- renderPlot({
             totInf <- data.frame(Days,MeanTotalInfections)
@@ -1132,15 +1249,116 @@ shinyServer(function(input, output, session) {
         
         })
         
-        output$SummaryTable <- renderTable(na.omit(as.data.frame(storingValues$SummaryResults)), align = c("c"), striped = FALSE, digits = 2)
+        #DM plots
+        
+        #plot the total number of infections
+        output$TotInfections_DM <- renderPlot({
+          totInf <- data.frame(Days,MeanTotalInfections)
+          
+          ggplot(totInf, aes(x=Days, y=MeanTotalInfections)) +
+            geom_line( color="#D55E00", size=1.5, alpha=0.8, linetype=1) +
+            geom_ribbon(
+              aes(ymin=MeanTotalInfections_Neg95,ymax=MeanTotalInfections_Pos95 ), fill="#D55E00", alpha=0.1) + 
+            geom_line(aes(x=Days,y = MeanTotalInfections_Pos95), color="#D55E00", size=1, alpha=0.4, linetype=1) +
+            geom_line(aes(x=Days,y = MeanTotalInfections_Neg95), color="#D55E00", size=1, alpha=0.4, linetype=1) +
+            geom_line(aes(x=Days,y = MeanTotalInfections), color="#D55E00", size=1.5, alpha=1, linetype=1) +
+            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.border = element_blank(),
+                  panel.background = element_blank()) + xlab("Time (Days)") + ylab("Total mean infections (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
+        })
+        
+        
+        #plot the total number of active infections
+        output$NumActiveInfections_DM  <- renderPlot({
+          totInf <- data.frame(Days,MeanNumberOfInfections)
+          
+          ggplot(totInf, aes(x=Days, y=MeanNumberOfInfections)) +
+            geom_line( color="#0072B2", size=1.5, alpha=0.8, linetype=1) +
+            geom_ribbon(
+              aes(ymin=MeanNumberOfInfections_Neg95,ymax=MeanNumberOfInfections_Pos95 ), fill="#0072B2", alpha=0.1) + 
+            geom_line(aes(x=Days,y = MeanNumberOfInfections_Pos95), color="#0072B2", size=1, alpha=0.4, linetype=1) +
+            geom_line(aes(x=Days,y = MeanNumberOfInfections_Neg95), color="#0072B2", size=1, alpha=0.4, linetype=1) +
+            geom_line(aes(x=Days,y = MeanNumberOfInfections), color="#0072B2", size=1.5, alpha=1, linetype=1) +
+            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.border = element_blank(),
+                  panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active infections (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
+        })
+        
+        output$NumActiveRecoveriesPlot_DM  <- renderPlot({
+          totInf <- data.frame(Days,MeanNumberOfCasesDetected)
+          
+          ggplot(totInf, aes(x=Days, y=MeanNumberOfCasesDetected)) +
+            geom_line( color="#009E73", size=1.5, alpha=0.8, linetype=1) +
+            geom_ribbon(
+              aes(ymin=MeanNumberOfCasesDetected_Neg95,ymax=MeanNumberOfCasesDetected_Pos95 ), fill="#009E73", alpha=0.1) + 
+            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected_Pos95), color="#009E73", size=1, alpha=0.4, linetype=1) +
+            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected_Neg95), color="#009E73", size=1, alpha=0.4, linetype=1) +
+            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected), color="#009E73", size=1.5, alpha=1, linetype=1) +
+            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.border = element_blank(),
+                  panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
+        })
+        
+        
+        output$NumRecoveriesPlot_DM  <- renderPlot({
+          totInf <- data.frame(FinalTotInfections,TotalAbsentDays)
+          
+          ggplot(totInf, aes(x=FinalTotInfections, y=TotalAbsentDays)) +
+            geom_point( size=5, alpha=0.2) +
+            geom_segment(aes(x = min(FinalTotInfections)*(0.95) , y = mean(TotalAbsentDays), xend = mean(FinalTotInfections), yend = mean(TotalAbsentDays)),linetype=2,size = 1, color = "turquoise3")+
+            geom_segment(aes(x = mean(FinalTotInfections), y = min(TotalAbsentDays)*0.95, xend = mean(FinalTotInfections), yend = mean(TotalAbsentDays)),linetype=2,size = 1, color = "turquoise3")+
+            geom_point(size=5,aes(x=mean(FinalTotInfections), y=mean(TotalAbsentDays)),color = "turquoise3") + 
+            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.border = element_blank(),
+                  panel.background = element_blank()) + xlab("Total mean number of infections") + ylab("Total mean number of absent days") 
+          
+        })
+        
+        SummaryTableCurrentData <- na.omit(as.data.frame(storingValues$SummaryResults))
+        
+        
+        output$SummaryTable <- renderTable(SummaryTableCurrentData, align = c("c"), striped = FALSE,digits = 2)
         
         
         output$SaveResultsButton<- downloadHandler(
           filename = function() {
-            "SummaryResults.xlsx"
+            "Export_Simulation_Results.xlsx"
           },
           content = function(file) {
-            write_xlsx(list("Data" = Data_output,  "Parameter values" = ParameterValues,"Frequencies" = Frequencies), file)
+            
+            DataWorkBook <- createWorkbook()
+            
+            hs2 <- createStyle( fontColour = "#000000", fgFill = "#E7A69F",
+              halign = "center", valign = "center", textDecoration = "bold",
+              border = "TopBottomLeftRight"
+            )
+            
+            for (k in 1:length(SimulationExport$SimulationExportDataStructure)){
+              
+            SheetName = paste0("Sim. ID ", storingValues$SummaryResults[k+1,1])
+            addWorksheet(DataWorkBook, SheetName)
+            
+            FullDateOutput = SimulationExport$SimulationExportDataStructure[[k]]
+            curr_row <- 1
+            for(i in seq_along(FullDateOutput)) {
+              writeData(DataWorkBook, SheetName, names(FullDateOutput)[i], startCol = 1, startRow = curr_row,headerStyle = hs2)
+              writeData(DataWorkBook, SheetName, FullDateOutput[[i]], startCol = 1, startRow = curr_row+1,headerStyle = hs2)
+              curr_row <- curr_row + nrow(FullDateOutput[[i]]) + 2
+            }
+            saveWorkbook(DataWorkBook, file = file,overwrite = TRUE)
+            
+            }
+            
+            
+            
           }
         )
         
