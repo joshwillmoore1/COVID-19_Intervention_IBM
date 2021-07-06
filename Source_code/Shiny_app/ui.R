@@ -7,7 +7,8 @@ library(fontawesome)
 library(shinyBS)
 library(shinyjs)
 library(shinyalert)
-
+library(tippy)
+library(bsplus)
 
 shinyUI(fluidPage(
   theme = light,
@@ -25,6 +26,12 @@ shinyUI(fluidPage(
         gtag('config', 'G-HMEHLW3KFP');
      </script>"
   )),
+  
+  #this is for the tippy colors
+  includeCSS("TippyLightMode.css"),
+  includeCSS("TippyDarkMode.css"),
+  
+
 
   
   
@@ -35,7 +42,7 @@ shinyUI(fluidPage(
              
              conditionalPanel( condition = "input.dark_mode == 0",
              
-             titlePanel(title = div(img(
+             titlePanel(title = shiny::div(img(
                src = 'UpdatedLogoSmall.png',height = round(344 * 0.4),width = round(344 * 0.4)),
                "COVID-19 Intervention Simulator", style = "float:left; font-size:130%"), 
                shiny::tags$head(shiny::tags$link(rel = "shortcut icon",
@@ -47,7 +54,7 @@ shinyUI(fluidPage(
              
              conditionalPanel( condition = "input.dark_mode == 1",
                                
-                               titlePanel(title = div(img(
+                               titlePanel(title = shiny::div(img(
                                  src = 'UpdatedLogoSmallDM.png',height = round(344 * 0.4),width = round(344 * 0.4)),
                                  "COVID-19 Intervention Simulator", style = "float:left; font-size:130%"), 
                                  shiny::tags$head(shiny::tags$link(rel = "shortcut icon",
@@ -67,7 +74,7 @@ shinyUI(fluidPage(
         
         column(2,align = "right",style = 'padding:0%;',
                
-               actionButton("GitButton",label=NULL,icon = icon("github",style = "font-size: 20px"), 
+               actionButton("GitButton",label=NULL,icon = shiny::icon("github",style = "font-size: 20px",lib = "font-awesome"), 
                             style = "padding:1%;background: #66000000;border: 0px;height: 30px",
                             onclick ="window.open('https://github.com/joshwillmoore1/COVID-19_Intervention_IBM', '_blank')")
                
@@ -108,26 +115,28 @@ shinyUI(fluidPage(
     
     wellPanel( style = "border-radius: 0px 0px 0px 0px",
     bsCollapse(id = "InformationPanel",
-               bsCollapsePanel(
-                 tags$p(strong("Information"),fa("chevron-down", fill = NULL)), 
+               bsCollapsePanel( 
+                 title = p(strong("Information"),(fa("chevron-down", fill = NULL))), 
+                 value = "infoPanel", 
+                 
+                 hr(),
                  h4("The model"),
-                 p("This application uses a stochastic agent-based model to simulate infection transmission of COVID-19 coupled with various non-pharmaceutical interventions in educational settings.",
-                   " The employed model allows for the agents to be grouped together to simulate the effect of close-range contact on transmission and various isolation policies, for example, the subgroups can be considered as tables groups in a classroom or class members within a school of agents.",
-                   " In addition, the software allows for control of agent mixing and testing frequencies over a characteristic week. A flow diagram of the model subroutines is shown below and for more details on the agent-based infection transmission model, see the reference text which can be found", 
-                   a("here.",href = "https://www.medrxiv.org/content/10.1101/2021.03.08.21253122v1") ),
+                 
+                 ModelInfoText,
+                 
                  column(12,align = "center",
                         img(src = "model_flowchart_nw.png",width = "60%",height = "auto")
                         ),
+                 hr(),
+                 
                  h4("Data"),
-                 p("The data used to update the parameters is sourced from the official UK Government COVID-19 database, which can be found ",
-                   a("here.",href = "https://coronavirus.data.gov.uk/details/download"),
-                   " On start-up, this software retrieves the most up-to-date information for the transmission rates, positive tests and administered tests in Wales from the database.",
-                   " The background prevalence is estimated as the a severn day average of the percentage of postive cases in total daily tests administered.",
-                    " As the transmission data is updated biweekly, the R number is estimated using the most recent data entries only."),
+                 DataInfoText,
+                 
+                 hr(),
                  
                  h4("Results"),
-                 p("The results shown in the plots, summary table and exported files represent the average of 500 simulations using the user-specified parameters. The total infections, active infections and active isolations figures are expressed as a percentage of the total population, with the shaded regions of the plots designate the 95% confidence intervals about the mean.",
-                   " The 'Export results' button saves the current parameter values and simulation data to a downloadable .xlsx file to allow the user to conduct further analysis using excel.")
+                 ResultsInfoText
+                 
                  )))
   )),
   
@@ -161,7 +170,7 @@ shinyUI(fluidPage(
          shiny::div( class = "custom-control custom-switch",
            tags$input( id = "UseDataRCheck",  type = "checkbox", class = "custom-control-input",
              onclick = HTML( "Shiny.setInputValue('UseDataRCheck', document.getElementById('UseDataRCheck').value);" )),
-           tags$label( p("Use current ", a("infection data", href = "https://coronavirus.data.gov.uk/details/download"), "in Wales"),
+           tags$label( p("Use current ", a("confirmed cases data", href = "https://coronavirus.data.gov.uk/details/download"), "in Wales"),
              `for` = "UseDataRCheck",
              class = "custom-control-label")),
          
@@ -188,10 +197,12 @@ shinyUI(fluidPage(
                  
       bsCollapsePanel(
         tags$p(strong("Intervention Parameters"), fa("chevron-down", fill = NULL)),
+
   
           
           sliderInput( "FalseNegSlider", "Probability of false negative test (%):",
             min = 0, max = 100, value = 20, step = 2.5  ),
+        
           
           sliderInput("FalsePosSlider", "Probability of false positive test (%):",
             min = 0, max = 10, value = 0.3, step = 0.1 ),
@@ -211,7 +222,7 @@ shinyUI(fluidPage(
           shiny::div(class = "custom-control custom-switch",
             tags$input(id = "GoodVentilationCheck",type = "checkbox", class = "custom-control-input",
               onclick = HTML("Shiny.setInputValue('GoodVentilationCheck', document.getElementById('GoodVentilationCheck').value);")),
-            tags$label("Well ventilated environment", `for` = "GoodVentilationCheck", class = "custom-control-label")),
+            tags$label("Agents are in a well ventilated environment", `for` = "GoodVentilationCheck", class = "custom-control-label")),
           
           h6(""),
           
@@ -268,19 +279,34 @@ shinyUI(fluidPage(
       wellPanel(style = "border-radius: 0px 0px 0px 0px",
                 
         h4(strong("Simulation Control"), align = "center"),
-        
         h6(""),
         
+        conditionalPanel(condition = "input.dark_mode == 0",
+        column(12, align = "right",style = "position: absolute; top: 26%;right:1%", actionButton("InfoSimID",label=NULL,icon = icon("info-circle")
+                                                 , style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
+               tippy_this(elementId = "InfoSimID", tooltip = simIDhelpText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
+               )),
+        
+        conditionalPanel(condition = "input.dark_mode == 1",
+                         column(12, align = "right",style = "position: absolute; top: 26%;right:1%", actionButton("InfoSimID_DM",label=NULL,icon = icon("info-circle")
+                                                                                                                  , style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
+                                tippy_this(elementId = "InfoSimID_DM", tooltip = simIDhelpText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
+                         )),
+        
+        textInput( inputId = "SimIDinput", label = "",placeholder = "Simulation ID (optional)"),
+
+        
+        h6(""),
         fluidRow( column( 6, align = "center",
             
-            actionButton("StartSim","Start", align = "center",
+            actionButton("StartSim","Start", align = "center", width = '60%',
               icon = icon("play", style = "font-size: 15px"))
             
           ),
           
           column( 6,align = "center",
                   
-            actionButton("ResetButton", "Reset",align = "center",
+            actionButton("ResetButton", "Reset",align = "center", width = '60%',
               icon = icon("redo", style = "font-size: 15px"))
           )
           
@@ -318,13 +344,63 @@ shinyUI(fluidPage(
                #results title
                fluidRow( align = "centre",
                  
-                 column(6,plotOutput("TotInfections")),
+                 column(6,
+                        
+                        
+                        conditionalPanel( condition = "input.dark_mode == 0",
+                        plotOutput("TotInfections"),
+                        tippy_this(elementId = "TotInfections", tooltip = totalInf_help_text, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode')
+                        ),
+                        conditionalPanel( condition = "input.dark_mode == 1",
+                        plotOutput("TotInfections_DM"),
+                        tippy_this(elementId = "TotInfections_DM", tooltip = totalInf_help_text,arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode')
+                        )
+                        
+                        ),
                  
-                 column(6,plotOutput("NumActiveInfections")),
+                 column(6,
+                        
+                        conditionalPanel( condition = "input.dark_mode == 0",
+                        plotOutput("NumActiveInfections"),
+                        tippy_this(elementId = "NumActiveInfections", tooltip = activeInf_help_text,arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode')
+                        ),
+                        
+                        conditionalPanel( condition = "input.dark_mode == 1",
+                                          plotOutput("NumActiveInfections_DM"),
+                                          tippy_this(elementId = "NumActiveInfections_DM", tooltip = activeInf_help_text,arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode')
+                        )
+                        
+                        ),
                  
-                 column(6,plotOutput("NumActiveRecoveriesPlot")),
-                 
-                 column(6,plotOutput("NumRecoveriesPlot"))
+                 column(6,
+                        
+                        conditionalPanel( condition = "input.dark_mode == 0",
+                        plotOutput("NumActiveRecoveriesPlot"),
+                        tippy_this(elementId = "NumActiveRecoveriesPlot", tooltip = IsolationInf_help_text,arrow = TRUE,placement = 'bottom',inertia =  TRUE,theme='lightMode')
+                        
+                        ),
+                        
+                        conditionalPanel( condition = "input.dark_mode == 1",
+                                          plotOutput("NumActiveRecoveriesPlot_DM"),
+                                          tippy_this(elementId = "NumActiveRecoveriesPlot_DM", tooltip = IsolationInf_help_text,arrow = TRUE,placement = 'bottom',inertia =  TRUE,theme='darkMode')
+                                          
+                        )
+                        
+                        ),
+                  
+                 column(6,
+                        
+                        conditionalPanel( condition = "input.dark_mode == 0",
+                        plotOutput("NumRecoveriesPlot"),
+                        tippy_this(elementId = "NumRecoveriesPlot", tooltip = RatioInf_help_text,arrow = TRUE,placement = 'bottom',inertia =  TRUE,theme='lightMode' )
+                        ),
+                        
+                        conditionalPanel( condition = "input.dark_mode == 1",
+                                          plotOutput("NumRecoveriesPlot_DM"),
+                                          tippy_this(elementId = "NumRecoveriesPlot_DM", tooltip = RatioInf_help_text,arrow = TRUE,placement = 'bottom',inertia =  TRUE,theme='darkMode' )
+                        )
+                        
+                        )
                  
                ),
                
@@ -339,7 +415,10 @@ shinyUI(fluidPage(
                  
                  column( 12, align = "center",
                    h5(strong("Summary results"), align = "center"),
-                   tableOutput("SummaryTable")
+                   
+                   
+                   tableOutput("SummaryTable"), 
+                     
                  )
                  
                )
