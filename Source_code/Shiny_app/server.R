@@ -7,7 +7,8 @@ library(writexl)
 library(shinyBS)
 library(openxlsx)
 library(thematic)
-
+library(viridis)
+library(shinyWidgets)
 
 shinyServer(function(input, output, session) {
   
@@ -28,7 +29,6 @@ shinyServer(function(input, output, session) {
                           
    })
    
-   shinyBS::addPopover(session, "NumRecoveriesPlot", "Data",content = paste0("HelloWorld") )
    
    observeEvent(input$UseDataRCheck, {
      if (input$UseDataRCheck == TRUE){
@@ -51,8 +51,20 @@ shinyServer(function(input, output, session) {
    })
    
    storingValues <- reactiveValues()
-   storingValues$SummaryResults = matrix(,,5,dimnames = list(NULL,c("Simulation ID", "Mean total infections", "Mean total recoveries","Percentage of total outbreaks (%)","Mean absence-infection ratio")))
+   storingValues$SummaryResults = matrix(,,6,dimnames = list(NULL,c("Simulation ID", "Mean total infections", "Mean total recoveries","Percentage of total outbreaks (%)","Mean absence-infection ratio","Plot data")))
    storingValues$count_check = as.integer(0);
+   
+   KeepTrackOfPlotCheck <- reactiveValues();
+   KeepTrackOfPlotCheck$ListOfChecks <-list();
+   
+   PlottingResultsData <-reactiveValues();
+   PlottingResultsData$totalInfectionsPlot <- list();
+   PlottingResultsData$ActiveInfectionsPlot <- list();
+   PlottingResultsData$ActiveIsolationsPlot <- list();
+   PlottingResultsData$totalAbsencesPlot <- list();
+   
+   CheckBoxColours <- reactiveValues();
+   CheckBoxColours$Colours <-list();
    
    SimulationExport <-reactiveValues()
    SimulationExport$SimulationExportDataStructure <-list()
@@ -158,7 +170,7 @@ shinyServer(function(input, output, session) {
              panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") + xlim(1,28) + ylim(0,100)
    })
    
-    output$SummaryTable <- renderTable(as.data.frame(storingValues$SummaryResults), align = c("c"), striped = FALSE, digits = 2)
+    output$SummaryTable <- renderTable(as.data.frame(storingValues$SummaryResults),sanitize.text.function = function(x) x, align = c("c"), striped = FALSE, digits = 2)
    
    output$SaveResultsButton<- downloadHandler(
      filename = function() {
@@ -328,9 +340,14 @@ shinyServer(function(input, output, session) {
                panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") + xlim(1,28) + ylim(0,100)
      })
      
+     PlottingResultsData$totalInfectionsPlot <- list();
+     PlottingResultsData$ActiveInfectionsPlot <- list();
+     PlottingResultsData$ActiveIsolationsPlot <- list();
+     PlottingResultsData$totalAbsencesPlot <- list();
+     
       SimulationExportDataStructure <- list()
       storingValues$count_check = 0;
-      storingValues$SummaryResults = matrix(,,5,dimnames = list(NULL,c("Simulation ID", "Mean total infections", "Mean total recoveries","Percentage of total outbreaks (%)","Mean absence-infection ratio")))
+      storingValues$SummaryResults = matrix(,,6,dimnames = list(NULL,c("Simulation ID", "Mean total infections", "Mean total recoveries","Percentage of total outbreaks (%)","Mean absence-infection ratio","Plot data")))
       output$SummaryTable <- renderTable(as.data.frame(storingValues$SummaryResults), align = c("c"), striped = FALSE, digits = 2)
      
      output$SaveResultsButton<- downloadHandler(
@@ -1081,8 +1098,6 @@ shinyServer(function(input, output, session) {
         Mean_Number_of_active_isolations = colMeans(NumberOfCasesDetected)
         Mean_total_number_of_infections = colMeans(Ntot-HealthyPeople)
         
-        Data_output = data.frame(Day = Days,Mean_Number_of_active_infected,Mean_Number_of_recoveries,Mean_Number_of_active_isolations,Mean_total_number_of_infections)
-        
         TotInfections = Ntot-HealthyPeople
         FinalTotInfections = (TotInfections[,length(Days)])
         FinalTotRecoveries = NumberOfRecoveries[,length(Days)]
@@ -1096,21 +1111,34 @@ shinyServer(function(input, output, session) {
           }
         }
         
+        base_col <- plasma(3)
         storingValues$count_check <- as.integer(storingValues$count_check + 1);
+        CheckBoxColours$Colours[[storingValues$count_check]] <- base_col[2]
+
+        
         
         if (input$SimIDinput == ""){
-        storingValues$SummaryResults = rbind(storingValues$SummaryResults,c(as.character(storingValues$count_check),round(mean(FinalTotInfections),digits = 2), round(mean(FinalTotRecoveries),digits = 2), 
-                                                                            formatC( round((NumberOfTotalOutbreaks/NoS)*100,digits = 2), format='f', digits=2 ),  round(mean(AbsentDaysInfectionRatio),digits = 2) ))
+        storingValues$SummaryResults = rbind(storingValues$SummaryResults,
+                                             
+                                             c(as.character(storingValues$count_check),round(mean(FinalTotInfections),digits = 2), 
+                                               round(mean(FinalTotRecoveries),digits = 2), 
+                                               formatC( round((NumberOfTotalOutbreaks/NoS)*100,digits = 2), format='f', digits=2 ),  
+                                               round(mean(AbsentDaysInfectionRatio),digits = 2),as.character(prettyCheckbox(paste0("PlotCheckID_",storingValues$count_check),NULL,value = TRUE,status = "primary", animation = 'smooth')) )
+                                             
+                                             
+                                             )
         } else{
-          storingValues$SummaryResults = rbind(storingValues$SummaryResults,c(input$SimIDinput,round(mean(FinalTotInfections),digits = 2), round(mean(FinalTotRecoveries),digits = 2), 
-                                                                              formatC( round((NumberOfTotalOutbreaks/NoS)*100,digits = 2), format='f', digits=2 ),  round(mean(AbsentDaysInfectionRatio),digits = 2) ))
-          
+          storingValues$SummaryResults = rbind(storingValues$SummaryResults,c(input$SimIDinput,round(mean(FinalTotInfections),digits = 2),
+                                                                              round(mean(FinalTotRecoveries),digits = 2), 
+                                                                              formatC( round((NumberOfTotalOutbreaks/NoS)*100,digits = 2), format='f', digits=2 ),  
+                                                                              round(mean(AbsentDaysInfectionRatio),digits = 2),
+                                                                              as.character(prettyCheckbox(paste0("PlotCheckID_",storingValues$count_check),NULL,value = TRUE,status = "primary") )))
           
         }
         
-        #Data for export
-        CurrentSimData <- list(ParameterValues,Frequencies,Data_output)
-        SimulationExport$SimulationExportDataStructure[[storingValues$count_check]] <- CurrentSimData
+        #In case reset has been hit, active the observable
+        updatePrettyCheckbox(session,paste0("PlotCheckID_", storingValues$count_check), value = TRUE)
+        
         
         MeanTotalInfections=colMeans(Ntot-HealthyPeople);
         MeanTotalInfections_Pos95 =  MeanTotalInfections + z_value*apply((Ntot-HealthyPeople),2,sd)
@@ -1176,156 +1204,482 @@ shinyServer(function(input, output, session) {
         MeanNumberOfCasesDetected_Pos95 = (MeanNumberOfCasesDetected_Pos95/Ntot)*100
         MeanNumberOfCasesDetected_Neg95 = (MeanNumberOfCasesDetected_Neg95/Ntot)*100
         
+        
+        
+        Data_output = data.frame(Day = Days,Mean_Number_of_active_infected,Mean_Number_of_recoveries,Mean_Number_of_active_isolations,Mean_total_number_of_infections)
+        
 
-       
-        #plot the total number of infections
-        output$TotInfections <- renderPlot({
-            totInf <- data.frame(Days,MeanTotalInfections)
+        TotalAbsentDays <- as.numeric(TotalAbsentDays)
+        if (input$SimIDinput == ""){
+          SimID <- rep(c(paste("Sim ID: ",as.character(storingValues$count_check))),times=length(Days))
+          SimIDnos <- rep(c(paste("Sim ID: ",as.character(storingValues$count_check))),times=NoS)
+        } else {
+          SimID <- rep(c(paste("Sim ID: ",as.character(input$SimIDinput))),times=length(Days))
+          SimIDnos <- rep(c(paste("Sim ID: ",as.character(input$SimIDinput))),times=NoS)
+        }
+        
+        #Data for storing plots
+        PlottingResultsData$totalInfectionsPlot[[storingValues$count_check]] <- data.frame(Days,MeanTotalInfections,MeanTotalInfections_Pos95,MeanTotalInfections_Neg95,SimID)
+        PlottingResultsData$ActiveInfectionsPlot[[storingValues$count_check]] <- data.frame(Days,MeanNumberOfInfections,MeanNumberOfInfections_Pos95,MeanNumberOfInfections_Neg95,SimID)
+        PlottingResultsData$ActiveIsolationsPlot[[storingValues$count_check]] <- data.frame(Days,MeanNumberOfCasesDetected, MeanNumberOfCasesDetected_Pos95,MeanNumberOfCasesDetected_Neg95,SimID)
+        PlottingResultsData$totalAbsencesPlot[[storingValues$count_check]] <- data.frame(FinalTotInfections,TotalAbsentDays,SimIDnos)
+        
+        
+        #Set the most recent box to be true - plot the data of the ticked boxes only
+        for (v in 1:storingValues$count_check) {
+          CheckId <- paste0("PlotCheckID_", v)
+          
+          if (v < storingValues$count_check) {
+            updatePrettyCheckbox(session,paste0("PlotCheckID_", v), value = FALSE)
+          }
+          else {
             
-            ggplot(totInf, aes(x=Days, y=MeanTotalInfections)) +
-                geom_line( color="#D55E00", size=1.5, alpha=0.8, linetype=1) +
-                geom_ribbon(
-                            aes(ymin=MeanTotalInfections_Neg95,ymax=MeanTotalInfections_Pos95 ), fill="#D55E00", alpha=0.1) + 
-                geom_line(aes(x=Days,y = MeanTotalInfections_Pos95), color="#D55E00", size=1, alpha=0.4, linetype=1) +
-                geom_line(aes(x=Days,y = MeanTotalInfections_Neg95), color="#D55E00", size=1, alpha=0.4, linetype=1) +
-                geom_line(aes(x=Days,y = MeanTotalInfections), color="#D55E00", size=1.5, alpha=1, linetype=1) +
-              theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
-                    panel.grid.major = element_blank(),
-                    panel.grid.minor = element_blank(),
-                    panel.border = element_blank(),
-                    panel.background = element_blank()) + xlab("Time (Days)") + ylab("Total mean infections (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
+            updatePrettyCheckbox(session, paste0("PlotCheckID_", v), value = TRUE)
+            if ( !(paste0("PlotCheckID_", v) %in% KeepTrackOfPlotCheck$ListOfChecks) ){
+              
+              observeEvent((input[[paste0("PlotCheckID_", v)]]), {
+                #colours for plots
+                PlotColsLM <- plasma(storingValues$count_check+2,direction = 1)
+
+                
+                #Total infections plot 
+                output$TotInfections <- renderPlot({
+                  plots_shown <- 0
+                   init_tot_plot <- ggplot() + theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                                                   panel.grid.major = element_blank(),
+                                                   panel.grid.minor = element_blank(),
+                                                   panel.border = element_blank(),
+                                                   legend.position= "top",
+                                                   legend.title = element_blank(),
+                                                   legend.text=element_text(size=17),
+                                                   legend.background=element_blank(),
+                                                   legend.key = element_rect(fill = "transparent"),
+                                                   panel.background = element_blank())
+                   LegendVals<- c();
+                   
+                     for (idx in 1:storingValues$count_check ){
+                       if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                          if (input[[paste0("PlotCheckID_", idx)]]){
+                            
+                            tempDataTOT <- PlottingResultsData$totalInfectionsPlot[[idx]]
+                            LegendVals <- cbind(LegendVals, c(as.character(PlotColsLM[1+idx]) ) )
+                            
+                            init_tot_plot <- init_tot_plot +
+                              geom_ribbon(aes_string(x = tempDataTOT$Days , ymin=tempDataTOT$MeanTotalInfections_Neg95,ymax=tempDataTOT$MeanTotalInfections_Pos95 ),fill = PlotColsLM[1+idx], alpha=0.1) + 
+                              geom_line(aes_string(x=tempDataTOT$Days,y = tempDataTOT$MeanTotalInfections_Pos95 ), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx] ) +
+                              geom_line(aes_string(x=tempDataTOT$Days,y = tempDataTOT$MeanTotalInfections_Neg95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx]) +
+                              geom_line(aes_string(x=tempDataTOT$Days,y = tempDataTOT$MeanTotalInfections,colour = factor(tempDataTOT$SimID) ), size=1.5, alpha=1, linetype=1) 
+                            
+                           plots_shown <- plots_shown + 1
+                          }
+                       }
+                     }
+                   
+                   if (plots_shown == 0){
+                     init_tot_plot <- init_tot_plot + ylim(0,100) + xlim(0,28) 
+                   }
+                   
+                   if (plots_shown == 1){
+                     init_tot_plot <- init_tot_plot + theme(legend.position= "none")
+                   }
+                   
+                   init_tot_plot <- init_tot_plot + labs(x = "Time (Days)", y = "Total mean infections (%)") +  scale_colour_manual(name="",values=LegendVals)
+                   print(init_tot_plot)
                 })
-      
-        
-        #plot the total number of active infections
-        output$NumActiveInfections <- renderPlot({
-            totInf <- data.frame(Days,MeanNumberOfInfections)
+                
+                #Total infections plot 
+                output$TotInfections_DM <- renderPlot({
+                  plots_shown <- 0
+                  init_tot_plot <- ggplot() + theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                                                    panel.grid.major = element_blank(),
+                                                    panel.grid.minor = element_blank(),
+                                                    panel.border = element_blank(),
+                                                    legend.position= "top",
+                                                    legend.title = element_blank(),
+                                                    legend.text=element_text(size=17),
+                                                    legend.background=element_blank(),
+                                                    legend.key = element_rect(fill = "transparent"),
+                                                    panel.background = element_blank())
+                  LegendVals<- c();
+                  
+                  for (idx in 1:storingValues$count_check ){
+                    if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                      if (input[[paste0("PlotCheckID_", idx)]]){
+                        
+                        tempDataTOT <- PlottingResultsData$totalInfectionsPlot[[idx]]
+                        LegendVals <- cbind(LegendVals, c(as.character(PlotColsLM[1+idx]) ) )
+                        
+                        init_tot_plot <- init_tot_plot +
+                          geom_ribbon(aes_string(x = tempDataTOT$Days , ymin=tempDataTOT$MeanTotalInfections_Neg95,ymax=tempDataTOT$MeanTotalInfections_Pos95 ),fill = PlotColsLM[1+idx], alpha=0.1) + 
+                          geom_line(aes_string(x=tempDataTOT$Days,y = tempDataTOT$MeanTotalInfections_Pos95 ), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx] ) +
+                          geom_line(aes_string(x=tempDataTOT$Days,y = tempDataTOT$MeanTotalInfections_Neg95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx]) +
+                          geom_line(aes_string(x=tempDataTOT$Days,y = tempDataTOT$MeanTotalInfections,colour = factor(tempDataTOT$SimID) ), size=1.5, alpha=1, linetype=1) 
+                        
+                        plots_shown <- plots_shown + 1
+                      }
+                    }
+                  }
+                  
+                  if (plots_shown == 0){
+                    init_tot_plot <- init_tot_plot + ylim(0,100) + xlim(0,28) 
+                  }
+                  
+                  if (plots_shown == 1){
+                    init_tot_plot <- init_tot_plot + theme(legend.position= "none")
+                  }
+                  
+                  init_tot_plot <- init_tot_plot + labs(x = "Time (Days)", y = "Total mean infections (%)") +  scale_colour_manual(name="",values=LegendVals)
+                  print(init_tot_plot)
+                })
+                
+                
+                #Mean active infections plots
+                
+                output$NumActiveInfections <- renderPlot({
+                  plots_shown <- 0
+                  init_active_inf_plot <- ggplot() 
+                  init_active_inf_plot <- ggplot() + theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                                                           panel.grid.major = element_blank(),
+                                                           panel.grid.minor = element_blank(),
+                                                           panel.border = element_blank(),
+                                                           legend.position= "top",
+                                                           legend.title = element_blank(),
+                                                           legend.text=element_text(size=17),
+                                                           legend.background=element_blank(),
+                                                           legend.key = element_rect(fill = "transparent"),
+                                                           panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active infections (%)") 
+                  LegendVals<- c();
+                  
+                  for (idx in 1:storingValues$count_check ){
+                    if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                      if (input[[paste0("PlotCheckID_", idx)]]){
+                        
+                        tempDataActInf <- PlottingResultsData$ActiveInfectionsPlot[[idx]]
+                        LegendVals <- cbind(LegendVals, c(as.character(PlotColsLM[1+idx]) ) )
+                        
+                        init_active_inf_plot <- init_active_inf_plot +
+                          geom_ribbon(aes_string(x = tempDataActInf$Days , ymin=tempDataActInf$MeanNumberOfInfections_Neg95,ymax=tempDataActInf$MeanNumberOfInfections_Pos95 ), fill = PlotColsLM[1+idx], alpha=0.1) + 
+                          geom_line(aes_string(x=tempDataActInf$Days,y = tempDataActInf$MeanNumberOfInfections_Pos95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx] ) +
+                          geom_line(aes_string(x=tempDataActInf$Days,y = tempDataActInf$MeanNumberOfInfections_Neg95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx]) +
+                          geom_line(aes_string(x=tempDataActInf$Days,y = tempDataActInf$MeanNumberOfInfections,colour = factor(tempDataActInf$SimID)), size=1.5, alpha=1, linetype=1) 
+                        
+                        plots_shown <- plots_shown + 1
+                      }
+                    }
+                  }
+                  
+                  if (plots_shown == 0){
+                    init_active_inf_plot <- init_active_inf_plot + ylim(0,100) + xlim(0,28)
+                  }
+                  if (plots_shown == 1){
+                    init_active_inf_plot <- init_active_inf_plot+ theme(legend.position= "none")
+                  }
+                  init_active_inf_plot <- init_active_inf_plot + scale_colour_manual(name="",values=LegendVals)
+                  
+                  print(init_active_inf_plot)
+                })
+                
+                output$NumActiveInfections_DM <- renderPlot({plots_shown <- 0
+                init_active_inf_plot <- ggplot() 
+                init_active_inf_plot <- ggplot() + theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                                                         panel.grid.major = element_blank(),
+                                                         panel.grid.minor = element_blank(),
+                                                         panel.border = element_blank(),
+                                                         legend.position= "top",
+                                                         legend.title = element_blank(),
+                                                         legend.text=element_text(size=17),
+                                                         legend.background=element_blank(),
+                                                         legend.key = element_rect(fill = "transparent"),
+                                                         panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active infections (%)") 
+                LegendVals<- c();
+                
+                for (idx in 1:storingValues$count_check ){
+                  if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                    if (input[[paste0("PlotCheckID_", idx)]]){
+                      
+                      tempDataActInf <- PlottingResultsData$ActiveInfectionsPlot[[idx]]
+                      LegendVals <- cbind(LegendVals, c(as.character(PlotColsLM[1+idx]) ) )
+                      
+                      init_active_inf_plot <- init_active_inf_plot +
+                        geom_ribbon(aes_string(x = tempDataActInf$Days , ymin=tempDataActInf$MeanNumberOfInfections_Neg95,ymax=tempDataActInf$MeanNumberOfInfections_Pos95 ), fill = PlotColsLM[1+idx], alpha=0.1) + 
+                        geom_line(aes_string(x=tempDataActInf$Days,y = tempDataActInf$MeanNumberOfInfections_Pos95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx] ) +
+                        geom_line(aes_string(x=tempDataActInf$Days,y = tempDataActInf$MeanNumberOfInfections_Neg95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx]) +
+                        geom_line(aes_string(x=tempDataActInf$Days,y = tempDataActInf$MeanNumberOfInfections,colour = factor(tempDataActInf$SimID)), size=1.5, alpha=1, linetype=1) 
+                      
+                      plots_shown <- plots_shown + 1
+                    }
+                  }
+                }
+                
+                if (plots_shown == 0){
+                  init_active_inf_plot <- init_active_inf_plot + ylim(0,100) + xlim(0,28)
+                }
+                if (plots_shown == 1){
+                  init_active_inf_plot <- init_active_inf_plot+ theme(legend.position= "none")
+                }
+                init_active_inf_plot <- init_active_inf_plot + scale_colour_manual(name="",values=LegendVals)
+                
+                print(init_active_inf_plot)
+                })
+                
+                #active isolations plots
+                output$NumActiveRecoveriesPlot <- renderPlot({
+                  plots_shown <- 0
+                  init_active_iso_plot <- ggplot() 
+                  init_active_iso_plot  <- ggplot() + theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                                                            panel.grid.major = element_blank(),
+                                                            panel.grid.minor = element_blank(),
+                                                            panel.border = element_blank(),
+                                                            legend.position= "top",
+                                                            legend.title = element_blank(),
+                                                            legend.text=element_text(size=17),
+                                                            legend.background=element_blank(),
+                                                            legend.key = element_rect(fill = "transparent"),
+                                                            panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") 
+                  LegendVals<- c();
+                  
+                  for (idx in 1:storingValues$count_check ){
+                    if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                      if (input[[paste0("PlotCheckID_", idx)]]){
+                        
+                        tempDataActIso <- PlottingResultsData$ActiveIsolationsPlot[[idx]]
+                        LegendVals <- cbind(LegendVals, c(as.character(PlotColsLM[1+idx]) )) 
+                        init_active_iso_plot  <- init_active_iso_plot  +
+                          geom_ribbon(aes_string(x = tempDataActIso$Days , ymin=tempDataActIso$MeanNumberOfCasesDetected_Neg95,ymax=tempDataActIso$MeanNumberOfCasesDetected_Pos95 ), fill = PlotColsLM[1+idx], alpha=0.1) + 
+                          geom_line(aes_string(x=tempDataActIso$Days,y = tempDataActIso$MeanNumberOfCasesDetected_Pos95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx] ) +
+                          geom_line(aes_string(x=tempDataActIso$Days,y = tempDataActIso$MeanNumberOfCasesDetected_Neg95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx]) +
+                          geom_line(aes_string(x=tempDataActIso$Days,y = tempDataActIso$MeanNumberOfCasesDetected,colour = factor(tempDataActIso$SimID)), size=1.5, alpha=1, linetype=1) 
+                        
+                        plots_shown <- plots_shown + 1
+                      }
+                    }
+                  }
+                  
+                  if (plots_shown == 0){
+                    init_active_iso_plot  <- init_active_iso_plot + ylim(0,100) + xlim(0,28)
+                  }
+                  if (plots_shown == 1){
+                    init_active_iso_plot <- init_active_iso_plot+ theme(legend.position= "none")
+                  }
+                  init_active_iso_plot <- init_active_iso_plot + scale_colour_manual(name="",values=LegendVals)
+                  print(init_active_iso_plot)
+                })
+                
+                output$NumActiveRecoveriesPlot_DM <- renderPlot({
+                  plots_shown <- 0
+                  init_active_iso_plot <- ggplot() 
+                  init_active_iso_plot  <- ggplot() + theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                                                            panel.grid.major = element_blank(),
+                                                            panel.grid.minor = element_blank(),
+                                                            panel.border = element_blank(),
+                                                            legend.position= "top",
+                                                            legend.title = element_blank(),
+                                                            legend.text=element_text(size=17),
+                                                            legend.background=element_blank(),
+                                                            legend.key = element_rect(fill = "transparent"),
+                                                            panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") 
+                  LegendVals<- c();
+                  
+                  for (idx in 1:storingValues$count_check ){
+                    if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                      if (input[[paste0("PlotCheckID_", idx)]]){
+                        
+                        tempDataActIso <- PlottingResultsData$ActiveIsolationsPlot[[idx]]
+                        LegendVals <- cbind(LegendVals, c(as.character(PlotColsLM[1+idx]) )) 
+                        init_active_iso_plot  <- init_active_iso_plot  +
+                          geom_ribbon(aes_string(x = tempDataActIso$Days , ymin=tempDataActIso$MeanNumberOfCasesDetected_Neg95,ymax=tempDataActIso$MeanNumberOfCasesDetected_Pos95 ), fill = PlotColsLM[1+idx], alpha=0.1) + 
+                          geom_line(aes_string(x=tempDataActIso$Days,y = tempDataActIso$MeanNumberOfCasesDetected_Pos95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx] ) +
+                          geom_line(aes_string(x=tempDataActIso$Days,y = tempDataActIso$MeanNumberOfCasesDetected_Neg95), size=1, alpha=0.4, linetype=1,color = PlotColsLM[1+idx]) +
+                          geom_line(aes_string(x=tempDataActIso$Days,y = tempDataActIso$MeanNumberOfCasesDetected,colour = factor(tempDataActIso$SimID)), size=1.5, alpha=1, linetype=1) 
+                        
+                        plots_shown <- plots_shown + 1
+                      }
+                    }
+                  }
+                  
+                  if (plots_shown == 0){
+                    init_active_iso_plot  <- init_active_iso_plot + ylim(0,100) + xlim(0,28)
+                  }
+                  if (plots_shown == 1){
+                    init_active_iso_plot <- init_active_iso_plot+ theme(legend.position= "none")
+                  }
+                  init_active_iso_plot <- init_active_iso_plot + scale_colour_manual(name="",values=LegendVals)
+                  print(init_active_iso_plot)
+                })
+                
+                
+                
+                #tot infection - absences plot
+                
+                output$NumRecoveriesPlot <- renderPlot({
+                  plots_shown <- 0
+                  init_active_abs_plot <- ggplot() 
+                  init_active_abs_plot  <- ggplot() + theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                                                            panel.grid.major = element_blank(),
+                                                            panel.grid.minor = element_blank(),
+                                                            panel.border = element_blank(),
+                                                            legend.position= "top",
+                                                            legend.title = element_blank(),
+                                                            legend.text=element_text(size=17),
+                                                            legend.background=element_blank(),
+                                                            legend.key = element_rect(fill = "transparent"),
+                                                            panel.background = element_blank()) + xlab("Total mean number of infections") + ylab("Total mean number of absent days") 
+                  xlim_min <-Inf
+                  ylim_min <-Inf
+                  xlim_max <- -Inf
+                  ylim_max <- -Inf
+                  
+                  for (idx in 1:storingValues$count_check ){
+                    if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                      if (input[[paste0("PlotCheckID_", idx)]]){
+                        
+                        tempDataAbsInf <- PlottingResultsData$totalAbsencesPlot[[idx]]
+                        
+                        if (min(tempDataAbsInf$FinalTotInfections*(0.95)) < xlim_min){
+                          xlim_min <- min(tempDataAbsInf$FinalTotInfections*(0.95)) 
+                        }
+                        if (min(tempDataAbsInf$TotalAbsentDays)*0.95 < ylim_min){
+                          ylim_min <- min(tempDataAbsInf$TotalAbsentDays)*0.95
+                        }
+                        
+                        if (max(tempDataAbsInf$FinalTotInfections*(1.05)) > xlim_max){
+                          xlim_max <- max(tempDataAbsInf$FinalTotInfections*(1.05))
+                        }
+                        
+                        if (max(tempDataAbsInf$TotalAbsentDays)*1.05 > ylim_max){
+                          ylim_max <- max(tempDataAbsInf$TotalAbsentDays)*1.05 
+                        }
+                        
+                      }
+                    }
+                  }
+                        
+                  LegendVals<- c();
+                  
+                  for (idx in 1:storingValues$count_check ){
+                    if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                      if (input[[paste0("PlotCheckID_", idx)]]){
+                        
+                        LegendVals <- cbind(LegendVals, c(as.character(PlotColsLM[1+idx]) )) 
+                        tempDataAbsInf <- PlottingResultsData$totalAbsencesPlot[[idx]]
+                        
+                        init_active_abs_plot  <- init_active_abs_plot  +
+                          geom_point(aes_string( x = tempDataAbsInf$FinalTotInfections, y = tempDataAbsInf$TotalAbsentDays, colour = factor(tempDataAbsInf$SimIDnos)),size=3, alpha=0.1) + 
+                        geom_segment(aes_string(x = xlim_min , y = mean(tempDataAbsInf$TotalAbsentDays), xend = mean(tempDataAbsInf$FinalTotInfections), yend = mean(tempDataAbsInf$TotalAbsentDays)),linetype=2,size = 1,color = PlotColsLM[1+idx])+
+                        geom_segment(aes_string(x = mean(tempDataAbsInf$FinalTotInfections), y = ylim_min, xend = mean(tempDataAbsInf$FinalTotInfections), yend = mean(tempDataAbsInf$TotalAbsentDays)),linetype=2,size = 1, color = PlotColsLM[1+idx])+
+                        geom_point(size=5,aes_string(x=mean(tempDataAbsInf$FinalTotInfections), y=mean(tempDataAbsInf$TotalAbsentDays)),color = PlotColsLM[1+idx],shape = 4,stroke = 2) 
+                        
+                        plots_shown <- plots_shown + 1
+                      }
+                    }
+                  }
+                  
+                  init_active_abs_plot  <- init_active_abs_plot + ylim(ylim_min,ylim_max) + xlim(xlim_min,xlim_max)
+                  
+                  if (plots_shown == 0){
+                    init_active_abs_plot  <- init_active_abs_plot + ylim(0,100) + xlim(0,28)
+                  }
+                  if (plots_shown == 1){
+                    init_active_abs_plot <- init_active_abs_plot+ theme(legend.position= "none")
+                  }
+                  init_active_abs_plot <- init_active_abs_plot + scale_colour_manual(name="",values=LegendVals,guide = guide_legend(override.aes = list(alpha = 1) ))
+                  print(init_active_abs_plot)
+                })
+                
+                output$NumRecoveriesPlot_DM <- renderPlot({
+                  plots_shown <- 0
+                  init_active_abs_plot <- ggplot() 
+                  init_active_abs_plot  <- ggplot() + theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
+                                                            panel.grid.major = element_blank(),
+                                                            panel.grid.minor = element_blank(),
+                                                            panel.border = element_blank(),
+                                                            legend.position= "top",
+                                                            legend.title = element_blank(),
+                                                            legend.text=element_text(size=17),
+                                                            legend.background=element_blank(),
+                                                            legend.key = element_rect(fill = "transparent"),
+                                                            panel.background = element_blank()) + xlab("Total mean number of infections") + ylab("Total mean number of absent days") 
+                  xlim_min <-Inf
+                  ylim_min <-Inf
+                  xlim_max <- -Inf
+                  ylim_max <- -Inf
+                  
+                  for (idx in 1:storingValues$count_check ){
+                    if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                      if (input[[paste0("PlotCheckID_", idx)]]){
+                        
+                        tempDataAbsInf <- PlottingResultsData$totalAbsencesPlot[[idx]]
+                        
+                        if (min(tempDataAbsInf$FinalTotInfections*(0.95)) < xlim_min){
+                          xlim_min <- min(tempDataAbsInf$FinalTotInfections*(0.95)) 
+                        }
+                        if (min(tempDataAbsInf$TotalAbsentDays)*0.95 < ylim_min){
+                          ylim_min <- min(tempDataAbsInf$TotalAbsentDays)*0.95
+                        }
+                        
+                        if (max(tempDataAbsInf$FinalTotInfections*(1.05)) > xlim_max){
+                          xlim_max <- max(tempDataAbsInf$FinalTotInfections*(1.05))
+                        }
+                        
+                        if (max(tempDataAbsInf$TotalAbsentDays)*1.05 > ylim_max){
+                          ylim_max <- max(tempDataAbsInf$TotalAbsentDays)*1.05 
+                        }
+                        
+                      }
+                    }
+                  }
+                  
+                  LegendVals<- c();
+                  
+                  for (idx in 1:storingValues$count_check ){
+                    if (!(is.null(input[[paste0("PlotCheckID_", idx)]]))){
+                      if (input[[paste0("PlotCheckID_", idx)]]){
+                        
+                        LegendVals <- cbind(LegendVals, c(as.character(PlotColsLM[1+idx]) )) 
+                        tempDataAbsInf <- PlottingResultsData$totalAbsencesPlot[[idx]]
+                        
+                        init_active_abs_plot  <- init_active_abs_plot  +
+                          geom_point(aes_string( x = tempDataAbsInf$FinalTotInfections, y = tempDataAbsInf$TotalAbsentDays, colour = factor(tempDataAbsInf$SimIDnos)),size=3, alpha=0.1) + 
+                          geom_segment(aes_string(x = xlim_min , y = mean(tempDataAbsInf$TotalAbsentDays), xend = mean(tempDataAbsInf$FinalTotInfections), yend = mean(tempDataAbsInf$TotalAbsentDays)),linetype=2,size = 1,color = PlotColsLM[1+idx])+
+                          geom_segment(aes_string(x = mean(tempDataAbsInf$FinalTotInfections), y = ylim_min, xend = mean(tempDataAbsInf$FinalTotInfections), yend = mean(tempDataAbsInf$TotalAbsentDays)),linetype=2,size = 1, color = PlotColsLM[1+idx])+
+                          geom_point(size=5,aes_string(x=mean(tempDataAbsInf$FinalTotInfections), y=mean(tempDataAbsInf$TotalAbsentDays)),color = PlotColsLM[1+idx],shape = 4,stroke = 2) 
+                        
+                        plots_shown <- plots_shown + 1
+                      }
+                    }
+                  }
+                  
+                  init_active_abs_plot  <- init_active_abs_plot + ylim(ylim_min,ylim_max) + xlim(xlim_min,xlim_max)
+                  
+                  if (plots_shown == 0){
+                    init_active_abs_plot  <- init_active_abs_plot + ylim(0,100) + xlim(0,28)
+                  }
+                  if (plots_shown == 1){
+                    init_active_abs_plot <- init_active_abs_plot+ theme(legend.position= "none")
+                  }
+                  init_active_abs_plot <- init_active_abs_plot + scale_colour_manual(name="",values=LegendVals,guide = guide_legend(override.aes = list(alpha = 1) ))
+                  print(init_active_abs_plot)
+                  })
+                
+                
+                
+                })
+              KeepTrackOfPlotCheck$ListOfChecks <- cbind(KeepTrackOfPlotCheck$ListOfChecks,paste0("PlotCheckID_", v))
+            } 
             
-            ggplot(totInf, aes(x=Days, y=MeanNumberOfInfections)) +
-                geom_line( color="#0072B2", size=1.5, alpha=0.8, linetype=1) +
-                geom_ribbon(
-                    aes(ymin=MeanNumberOfInfections_Neg95,ymax=MeanNumberOfInfections_Pos95 ), fill="#0072B2", alpha=0.1) + 
-                geom_line(aes(x=Days,y = MeanNumberOfInfections_Pos95), color="#0072B2", size=1, alpha=0.4, linetype=1) +
-                geom_line(aes(x=Days,y = MeanNumberOfInfections_Neg95), color="#0072B2", size=1, alpha=0.4, linetype=1) +
-                geom_line(aes(x=Days,y = MeanNumberOfInfections), color="#0072B2", size=1.5, alpha=1, linetype=1) +
-              theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
-                    panel.grid.major = element_blank(),
-                    panel.grid.minor = element_blank(),
-                    panel.border = element_blank(),
-                    panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active infections (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
-               })
-        
-        output$NumActiveRecoveriesPlot <- renderPlot({
-          totInf <- data.frame(Days,MeanNumberOfCasesDetected)
+          }
           
-          ggplot(totInf, aes(x=Days, y=MeanNumberOfCasesDetected)) +
-            geom_line( color="#009E73", size=1.5, alpha=0.8, linetype=1) +
-            geom_ribbon(
-              aes(ymin=MeanNumberOfCasesDetected_Neg95,ymax=MeanNumberOfCasesDetected_Pos95 ), fill="#009E73", alpha=0.1) + 
-            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected_Pos95), color="#009E73", size=1, alpha=0.4, linetype=1) +
-            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected_Neg95), color="#009E73", size=1, alpha=0.4, linetype=1) +
-            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected), color="#009E73", size=1.5, alpha=1, linetype=1) +
-            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  panel.border = element_blank(),
-                  panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
-        })
-  
-        
-        output$NumRecoveriesPlot <- renderPlot({
-          totInf <- data.frame(FinalTotInfections,TotalAbsentDays)
           
-          ggplot(totInf, aes(x=FinalTotInfections, y=TotalAbsentDays)) +
-            geom_point( size=5, alpha=0.2) +
-            geom_segment(aes(x = min(FinalTotInfections)*(0.95) , y = mean(TotalAbsentDays), xend = mean(FinalTotInfections), yend = mean(TotalAbsentDays)),linetype=2,size = 1, color = "turquoise3")+
-            geom_segment(aes(x = mean(FinalTotInfections), y = min(TotalAbsentDays)*0.95, xend = mean(FinalTotInfections), yend = mean(TotalAbsentDays)),linetype=2,size = 1, color = "turquoise3")+
-            geom_point(size=5,aes(x=mean(FinalTotInfections), y=mean(TotalAbsentDays)),color = "turquoise3") + 
-            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  panel.border = element_blank(),
-                  panel.background = element_blank()) + xlab("Total mean number of infections") + ylab("Total mean number of absent days") 
+        }
         
-        })
+        #Data for export
+        CurrentSimData <- list(ParameterValues,Frequencies,Data_output)
+        SimulationExport$SimulationExportDataStructure[[storingValues$count_check]] <- CurrentSimData
         
-        #DM plots
-        
-        #plot the total number of infections
-        output$TotInfections_DM <- renderPlot({
-          totInf <- data.frame(Days,MeanTotalInfections)
-          
-          ggplot(totInf, aes(x=Days, y=MeanTotalInfections)) +
-            geom_line( color="#D55E00", size=1.5, alpha=0.8, linetype=1) +
-            geom_ribbon(
-              aes(ymin=MeanTotalInfections_Neg95,ymax=MeanTotalInfections_Pos95 ), fill="#D55E00", alpha=0.1) + 
-            geom_line(aes(x=Days,y = MeanTotalInfections_Pos95), color="#D55E00", size=1, alpha=0.4, linetype=1) +
-            geom_line(aes(x=Days,y = MeanTotalInfections_Neg95), color="#D55E00", size=1, alpha=0.4, linetype=1) +
-            geom_line(aes(x=Days,y = MeanTotalInfections), color="#D55E00", size=1.5, alpha=1, linetype=1) +
-            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  panel.border = element_blank(),
-                  panel.background = element_blank()) + xlab("Time (Days)") + ylab("Total mean infections (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
-        })
+        SummaryTableCurrentData <- (na.omit(as.data.frame(storingValues$SummaryResults)))
         
         
-        #plot the total number of active infections
-        output$NumActiveInfections_DM  <- renderPlot({
-          totInf <- data.frame(Days,MeanNumberOfInfections)
-          
-          ggplot(totInf, aes(x=Days, y=MeanNumberOfInfections)) +
-            geom_line( color="#0072B2", size=1.5, alpha=0.8, linetype=1) +
-            geom_ribbon(
-              aes(ymin=MeanNumberOfInfections_Neg95,ymax=MeanNumberOfInfections_Pos95 ), fill="#0072B2", alpha=0.1) + 
-            geom_line(aes(x=Days,y = MeanNumberOfInfections_Pos95), color="#0072B2", size=1, alpha=0.4, linetype=1) +
-            geom_line(aes(x=Days,y = MeanNumberOfInfections_Neg95), color="#0072B2", size=1, alpha=0.4, linetype=1) +
-            geom_line(aes(x=Days,y = MeanNumberOfInfections), color="#0072B2", size=1.5, alpha=1, linetype=1) +
-            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  panel.border = element_blank(),
-                  panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active infections (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
-        })
-        
-        output$NumActiveRecoveriesPlot_DM  <- renderPlot({
-          totInf <- data.frame(Days,MeanNumberOfCasesDetected)
-          
-          ggplot(totInf, aes(x=Days, y=MeanNumberOfCasesDetected)) +
-            geom_line( color="#009E73", size=1.5, alpha=0.8, linetype=1) +
-            geom_ribbon(
-              aes(ymin=MeanNumberOfCasesDetected_Neg95,ymax=MeanNumberOfCasesDetected_Pos95 ), fill="#009E73", alpha=0.1) + 
-            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected_Pos95), color="#009E73", size=1, alpha=0.4, linetype=1) +
-            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected_Neg95), color="#009E73", size=1, alpha=0.4, linetype=1) +
-            geom_line(aes(x=Days,y = MeanNumberOfCasesDetected), color="#009E73", size=1.5, alpha=1, linetype=1) +
-            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  panel.border = element_blank(),
-                  panel.background = element_blank()) + xlab("Time (Days)") + ylab("Mean active isolations (%)") + xlim(1,length(Days)) #+ ylim(0,Ntot)
-        })
-        
-        
-        output$NumRecoveriesPlot_DM  <- renderPlot({
-          totInf <- data.frame(FinalTotInfections,TotalAbsentDays)
-          
-          ggplot(totInf, aes(x=FinalTotInfections, y=TotalAbsentDays)) +
-            geom_point( size=5, alpha=0.2) +
-            geom_segment(aes(x = min(FinalTotInfections)*(0.95) , y = mean(TotalAbsentDays), xend = mean(FinalTotInfections), yend = mean(TotalAbsentDays)),linetype=2,size = 1, color = "turquoise3")+
-            geom_segment(aes(x = mean(FinalTotInfections), y = min(TotalAbsentDays)*0.95, xend = mean(FinalTotInfections), yend = mean(TotalAbsentDays)),linetype=2,size = 1, color = "turquoise3")+
-            geom_point(size=5,aes(x=mean(FinalTotInfections), y=mean(TotalAbsentDays)),color = "turquoise3") + 
-            theme(text = element_text(size=20),axis.line = element_line(colour = "grey"),
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  panel.border = element_blank(),
-                  panel.background = element_blank()) + xlab("Total mean number of infections") + ylab("Total mean number of absent days") 
-          
-        })
-        
-        SummaryTableCurrentData <- na.omit(as.data.frame(storingValues$SummaryResults))
-        
-        
-        output$SummaryTable <- renderTable(SummaryTableCurrentData, align = c("c"), striped = FALSE,digits = 2)
+        output$SummaryTable <- renderTable(SummaryTableCurrentData, sanitize.text.function = function(x) x, align = c("c"), striped = FALSE,digits = 2)
         
         
         output$SaveResultsButton<- downloadHandler(
