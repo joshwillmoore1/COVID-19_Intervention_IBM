@@ -50,9 +50,7 @@ IsolationInf_help_text = paste0("This figure displays the average number of isol
                              " The shaded regions of the plot designate the 95% confidence intervals about the mean.")
 
 RatioInf_help_text = paste0("This figure displays the total cumulative infections against the cumulative number of absent days from education for all 500 simulations.",
-                            " Each grey circle is the result of a single simulation."," The blue circle highlights the mean of the scatter data.")
-
-simIDhelpText = paste0("Keep track of your simulations by naming them!")
+                            " Each circle is the result of a single simulation."," The cross highlights the mean of the scatter data.")
 
 
 #information panel
@@ -74,6 +72,37 @@ DisclaimerText <- p("Any results extracted from this applet are purely theoretic
                     a("here.",href = "https://www.medrxiv.org/content/10.1101/2021.03.08.21253122v1"),
                     " The source code can be found",a("here",href = "https://github.com/joshwillmoore1/COVID-19_Intervention_IBM"), 
                     " as is offered under the MIT License. By using the software you are explicitly accepting these terms of service.")
+
+#control panel tips
+simIDhelpText = paste0("Keep track of your simulations by naming them!")
+
+
+#Infection panel tips
+InfoTotAgentsText = paste0("The number of individuals within the population, i.e. the total number of students in the classroom.")
+InfoSubgroupText = paste0("The number of individuals in close-contact bubbles within the populations, i.e. table groups within a classroom.")
+InfoBackPrevText = paste0("The background prevalance will determine the initial number of infections in the population.",
+                          " If 'infections from wider population' is turned on, this is the probability of a susceptible becoming infected at the end of every day.")
+InfoRnumText = paste0("The basic reproductive number is the number of infections expected from an infected agent.")
+InfoSymptText = paste0("Each agent has the probability of being symptomatic or asymptomatic on infection")
+InfoCurrentDataText = paste0("This data is sourced from the official UK Government COVID-19 database and uses comfirmed cases only, as a result the numbers may be larger than in reality.")
+InfoRecoverText = paste0("The recovery of an agent means for the agent to return to the population after 10 days of isolation, whether infected or in contact with an infective.",
+                         " We assume no infection is fatal.")
+InfoPrevBoolText = paste0("At the end of each day, any susceptible agent has the probability of being infected from interactions outside of the population using the background prevalence.")
+
+
+#Intervention panel tips
+InfoFalseNegText = paste0("Every test administered to an agent has the probability of giving a false negative result.")
+InfoFalsePosText = paste0("Every test administered to an agent has the probability of giving a false positive result.")
+InfoComplianceText = paste0(" All agents have the capacity to ignore an isolation order. This paramater controls the probability of accepting the isolation policy imposed.")
+InfoIsoSymText = paste0("If agents are proactive towards prevention of transmission, they will isolate themselves (and their close-contact group) on initial signs of symptoms.")
+InfoVentilationText = paste0("If agent are in a well ventilated location, the probability of transmission to agents outside of the close-contact group is reduced by 50%. A well ventilated also yields a 5-fold decrease in R.")
+InfoMasksText = paste0("Agents wearing masks reduces the R number by half.")
+
+#Mixing and testing panel tips
+InfoMixAndTestText = paste0("A mixing day defines periods where agents have the capacity to transmit the infection within the population.",
+                            " Tests are administered to all non-isolating agents in the morning before any agent interactions.")
+InfoWeeksText = paste0("This parameter repeats the mixing and testing frequencies. It should be noted that all parameters are fixed over this period.")
+InfoDelayText = paste0("The testing days prescribed above will not begin until an agent with symptoms is found.")
 
 sevenDayRollingPrev<-mean((DataCases$newCasesByPublishDate[1:7]/DataCases$newTestsByPublishDate[1:7])*100, na.rm = TRUE)
 DeloymentTime <- format(Sys.time())
