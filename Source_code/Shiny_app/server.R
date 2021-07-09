@@ -200,7 +200,7 @@ shinyServer(function(input, output, session) {
                        value = 1,step = 0.5)
      
      updateSliderInput(session,"Rlider", "R number:",
-                       min = 0, max = 3,
+                       min = 0, max = 10,
                        value = 1,step = 0.1)
      
      updateSliderInput(session,"SymptSlider", "Probability of symptomatic infections (%):",
@@ -222,6 +222,10 @@ shinyServer(function(input, output, session) {
      updateSliderInput(session,"NumWeeksSlider", "Number of weeks:",
                        min = 1, max = 13,
                        value = 4,step = 1)
+     
+     updateSliderInput(session,"PerImmuneSlider", "Percentage of immune agents (%):",
+                       min = 0, max = 100,
+                       value = 0)
      
      
      #control switches
@@ -377,8 +381,9 @@ shinyServer(function(input, output, session) {
     #Isolate the individual on infection: SubgroupSize = 1
     #Isolate the group on infection: SubgroupSize in [2,Ntot-1] and divisor
     
-    #ActivePop key: 0=susceptible, 1=infected (asympt), 2=recovered, 6=isolating,
-    #3=isolating but healthy, 4 = infected (sympt), 5 = isolating but recovered
+    #ActivePop key: 0=susceptible, 1=infected (asympt), 2=recovered,
+    #3=isolating but healthy, 4 = infected (sympt), 5 = isolating but recovered, 6=isolating because infected, 
+    # 7 = immune, 8 = isolating immune
     
     observeEvent(input$StartSim, {
         #Parameter definitions
@@ -475,13 +480,17 @@ shinyServer(function(input, output, session) {
         RemoveSympt = input$SymRevomalCheck; #Boolean to remove those that show symptoms
         PerFalsePos = input$FalsePosSlider; #percentage of false positives
         DelayTesting = input$InitTestCheck; #start simulations with testing days active - false means to wait for sympto
+        PerImmuneAgents = input$PerImmuneSlider; #percentage of agents that are immune from infection
         
         Parameters = c("Total number of agents", "Subgroup size","Background prevalence (%)", "R number" ,"Probability of false negative test (%)", "Probability of false positive test (%)",
-                       "Probability of agent compliance","Probability of symptomatic infection", "Agents recover","Infections from wider pop.","Isolate symptomatic","Delay testing","Days simulated")
-        Parameter_values = c(Ntot,SubgroupSize,Irb,R,PerFalseNeg,PerFalsePos,CompIso,PerSymptomatic,RecoveryBool,PrevBool,RemoveSympt,DelayTesting,7*input$NumWeeksSlider)
+                       "Probability of agent compliance (%)","Probability of symptomatic infection (%)","Percentage of immune agents (%)", "Agents recover","Infections from wider pop.","Isolate symptomatic", "Delay testing","Days simulated")
+        Parameter_values = c(Ntot,SubgroupSize,Irb,R,PerFalseNeg,PerFalsePos,CompIso,PerSymptomatic,PerImmuneAgents,RecoveryBool,PrevBool,RemoveSympt,DelayTesting,7*input$NumWeeksSlider)
         
         Frequencies = data.frame(Days = c("Sun","Mon","Tues","Wed","Thur","Fri","Sat"),Mixing_days = MixingDays[1:7],Testing_days = TestingDays[1:7])
         ParameterValues = data.frame(Parameters,Parameter_values)
+        
+        
+        NumOfImmuneAgents = round(PerImmuneAgents*0.01*Ntot);
         
         if (DelayTesting  == 1){
           TestingDays_sched = TestingDays;
@@ -608,7 +617,7 @@ shinyServer(function(input, output, session) {
                     }
                     
                     #determine the number of sympt in the pop.
-                    Infectedsym = runif(Ntot)<Ir;
+                    Infectedsym = runif(Ntot-NumOfImmuneAgents)<Ir;
                     Ninfsym = max(sum(Infectedsym),1);
                     
                     #vectors for timers
@@ -616,33 +625,48 @@ shinyServer(function(input, output, session) {
                     CountDownInfectious = matrix(Inf,Groups,SubgroupSize);
                     CountDownRecovery = matrix(Inf,Groups,SubgroupSize);
                     
-                    #vector for population dynamics
+                    #matrix for population dynamics
                     ActivePop = matrix(0,Groups,SubgroupSize)
-                    initInfectedIndicies = sample.int(Ntot, Ninfsym);
                     
-                    #check the each index is different
-                    while (length(initInfectedIndicies) != length(unique(initInfectedIndicies))){
-                        initInfectedIndicies = sample.int(Ntot, Ninfsym);
+                    
+                    #Randomly seed immune agents
+                    initImmuneIndicies = which(ActivePop == 0,TRUE)
+                    if (is.numeric(nrow(initImmuneIndicies))){
+                      if (nrow(initImmuneIndicies) > 0 ){  
+                        initImmuneIndicies = initImmuneIndicies[sample(1:nrow(initImmuneIndicies)),]
+
+                        for (k in 1:NumOfImmuneAgents){
+                          ActivePop[initImmuneIndicies [k,1],initImmuneIndicies[k,2]] = 7;
+                        }
+                      }
                     }
                     
-                    #randomly select an agent for infection
-                    for (z in 1:Ninfsym){
+                    
+                    
+                    #now get the indices of the susceptibles and mix up the order
+                    initSusceptIndices = which(ActivePop == 0 , TRUE)
+                   
+                    #randomly infect the sus agents 
+                    if (is.numeric(nrow(initSusceptIndices))){
+                      if (nrow(initSusceptIndices) > 0 ){  
+                        initSusceptIndices = initSusceptIndices[sample(1:nrow(initSusceptIndices)),]
                         
-                        #infection index to matrix agent
-                        InitInfGroup = floor((initInfectedIndicies[z]-1)/SubgroupSize)+1;
-                        InitIndexWithinGroup = initInfectedIndicies[z] - SubgroupSize*(InitInfGroup-1);
-                        
-                        if (runif(1) < PerSymptomatic){
-                            ActivePop[InitInfGroup,InitIndexWithinGroup] = 4;
+
+                        for (k in 1:Ninfsym){
+                          
+                          if (runif(1) < PerSymptomatic){
+                            ActivePop[initSusceptIndices[k,1],initSusceptIndices[k,2]] = 4;
                             
-                        } else {
-                            ActivePop[InitInfGroup,InitIndexWithinGroup] = 1;
+                          } else {
+                            ActivePop[initSusceptIndices[k,1],initSusceptIndices[k,2]] = 1;
+                          }
+                          
+                          CountDownDetection[initSusceptIndices[k,1],initSusceptIndices[k,2]] = tDet;
+                          CountDownInfectious[initSusceptIndices[k,1],initSusceptIndices[k,2]] = tInf;
+                          CountDownRecovery[initSusceptIndices[k,1],initSusceptIndices[k,2]] = tRec;
+                          
                         }
-                        
-                        CountDownDetection[InitInfGroup,InitIndexWithinGroup] = tDet;
-                        CountDownInfectious[InitInfGroup,InitIndexWithinGroup] = tInf;
-                        CountDownRecovery[InitInfGroup,InitIndexWithinGroup] = tRec;
-                        
+                      }
                     }
                     
                   #end initialisation  
@@ -678,6 +702,9 @@ shinyServer(function(input, output, session) {
                           else if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 0){
                             ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 0;
                           }
+                          else if (ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] == 7){
+                            ActivePop[RecoveredIndx[k,1],RecoveredIndx[k,2]] = 8;
+                          }
                           
                           CountDownDetection[RecoveredIndx[k,1],RecoveredIndx[k,2]] = Inf;
                           CountDownInfectious[RecoveredIndx[k,1],RecoveredIndx[k,2]] = Inf;
@@ -689,6 +716,9 @@ shinyServer(function(input, output, session) {
                       
                     }
                 }
+              
+              
+              
                 
                 #if active - students are tested using LFDs
               
@@ -723,6 +753,7 @@ shinyServer(function(input, output, session) {
                     #including false positives 
                     SusAgentIndex = which(ActivePop == 0,TRUE);
                     RecAgentIndex = which(ActivePop == 2,TRUE);
+                    ImmuneAgentIndex = which(ActivePop == 7,TRUE);
                     
                     if (as.numeric(nrow(SusAgentIndex))){
                         if (nrow(SusAgentIndex) > 0){
@@ -762,6 +793,27 @@ shinyServer(function(input, output, session) {
                             
                         }
                     }
+                    
+                    if (as.numeric(nrow(ImmuneAgentIndex))){
+                      
+                      if (nrow(ImmuneAgentIndex) > 0){
+                        for (k in 1:nrow(ImmuneAgentIndex)){
+                          if (runif(1) < PerFalsePos ){
+                            if (runif(1) < CompIso ){
+                              
+                              ActivePop[ImmuneAgentIndex[k,1],ImmuneAgentIndex[k,2]] = 8;
+                              CountDownDetection[ImmuneAgentIndex[k,1],ImmuneAgentIndex[k,2]] = Inf;
+                              CountDownInfectious[ImmuneAgentIndex[k,1],ImmuneAgentIndex[k,2]] = Inf;
+                              CountDownRecovery[ImmuneAgentIndex[k,1],ImmuneAgentIndex[k,2]]= tRec;
+                              posTestIndices = rbind(posTestIndices ,c(ImmuneAgentIndex[k,1],ImmuneAgentIndex[k,2]));
+                              
+                            }
+                          }
+                        }
+                        
+                      }
+                    }
+                    
                     #run through the positive test groups and isolate the compliant agents
                     if (length(posTestIndices) > 0){
                         GroupsToIsolate = unique(posTestIndices[,1])
@@ -800,7 +852,19 @@ shinyServer(function(input, output, session) {
                                         CountDownRecovery[GroupsToIsolate[k], kk ]= tRec;
                                         
                                     }
+                               }
+                              
+                              
+                              if (ActivePop[GroupsToIsolate[k], kk ] == 7 ||ActivePop[GroupsToIsolate[k], kk ] == 8){
+                                
+                                if (runif(1) < CompIso){
+                                  ActivePop[GroupsToIsolate[k], kk ]  = 8;
+                                  CountDownDetection[GroupsToIsolate[k], kk ] = Inf;
+                                  CountDownInfectious[GroupsToIsolate[k], kk ]= Inf;
+                                  CountDownRecovery[GroupsToIsolate[k], kk ]= tRec;
+                                  
                                 }
+                              }
                                 
                             }
                             
@@ -1011,6 +1075,21 @@ shinyServer(function(input, output, session) {
                                         
                                     }
                                 }
+                              
+                              if (ActivePop[GroupsToIsolate[k], kk ] == 7){
+                                
+                                if (runif(1) < CompIso){
+                                  ActivePop[GroupsToIsolate[k], kk ]  = 8;
+                                  CountDownDetection[GroupsToIsolate[k], kk ] = Inf;
+                                  CountDownInfectious[GroupsToIsolate[k], kk ]= Inf;
+                                  CountDownRecovery[GroupsToIsolate[k], kk ]= tRec;
+                                  
+                                }
+                              }
+                              
+                              
+                              
+                              
                                 
                             }
                             
@@ -1060,8 +1139,8 @@ shinyServer(function(input, output, session) {
                 #Track data
                 NumberOfInfections[i,j] = sum((ActivePop==1)) + sum((ActivePop==4)) ;
                 NumberOfRecoveries[i,j] = sum((ActivePop==2)) +sum(ActivePop==5);
-                NumberOfCasesDetected[i,j] = sum(ActivePop == 6)+sum(ActivePop==3) +sum(ActivePop==5) ;
-                HealthyPeople[i,j]= sum(ActivePop==0) + sum(ActivePop==3);
+                NumberOfCasesDetected[i,j] = sum(ActivePop == 6)+sum(ActivePop==3) +sum(ActivePop==5) + sum(ActivePop==8);
+                HealthyPeople[i,j]= sum(ActivePop==0) + sum(ActivePop==3) + sum(ActivePop==7) + sum(ActivePop==8);
                 
                 NumberOfSympt[i,j] = sum(ActivePop==4);
                 NumberOfAsympt[i,j] = sum(ActivePop==1);
@@ -1081,8 +1160,12 @@ shinyServer(function(input, output, session) {
             
             
             # keep track if all agents become infected
-            if (sum(ActivePop==0) == 0){
+          if (NumOfImmuneAgents != Ntot){
+              if ((sum(ActivePop==0)) == 0){
                 TotalOutbreakCounter[i] = 1;
+              }
+          }else{
+             TotalOutbreakCounter[i] = 0;
             }
             
             #Update progress bar
