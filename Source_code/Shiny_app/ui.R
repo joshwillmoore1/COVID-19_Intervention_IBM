@@ -1,3 +1,5 @@
+library(htmltools)
+library(shiny)
 library(bslib)
 library(numbers)
 library(shinyWidgets)
@@ -149,14 +151,14 @@ shinyUI(fluidPage(
          tags$p(strong("Infection Parameters"), fa("chevron-down", fill = NULL)), 
           
          conditionalPanel(condition = "input.dark_mode == 0",
-         column(12, align = "right",style = "position: absolute; top: 10%;right:0.5%", 
+         column(12, align = "right",style = "position: absolute; top: 8.7%;right:0.5%", 
                 
                 actionButton("InfoTotAgents",label=NULL,icon = icon("info-circle") , style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                 tippy_this(elementId = "InfoTotAgents", tooltip = InfoTotAgentsText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
          )),
          
          conditionalPanel(condition = "input.dark_mode == 1",
-                          column(12, align = "right",style = "position: absolute; top: 10%;right:0.5%", 
+                          column(12, align = "right",style = "position: absolute; top: 8.7%;right:0.5%", 
                                  
                                  actionButton("InfoTotAgents_DM",label=NULL,icon = icon("info-circle") , style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                                  tippy_this(elementId = "InfoTotAgents_DM", tooltip = InfoTotAgentsText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
@@ -167,13 +169,13 @@ shinyUI(fluidPage(
               max = 300,  value = 30, step = 5),
          
          conditionalPanel(condition = "input.dark_mode == 0",
-         column(12, align = "right",style = "position: absolute; top: 24.8%;right:0.5%", 
+         column(12, align = "right",style = "position: absolute; top: 21.5%;right:0.5%", 
                 actionButton("InfoSubgroup",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                 tippy_this(elementId = "InfoSubgroup", tooltip = InfoSubgroupText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
          )),
          
          conditionalPanel(condition = "input.dark_mode == 1",
-                          column(12, align = "right",style = "position: absolute; top: 24.8%;right:0.5%", 
+                          column(12, align = "right",style = "position: absolute; top: 21.5%;right:0.5%", 
                                  actionButton("InfoSubgroup_DM",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                                  tippy_this(elementId = "InfoSubgroup_DM", tooltip = InfoSubgroupText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
                           )),
@@ -184,13 +186,13 @@ shinyUI(fluidPage(
          
          
          conditionalPanel(condition = "input.dark_mode == 0",
-         column(12, align = "right",style = "position: absolute; top: 39.3%;right:0.5%",
+         column(12, align = "right",style = "position: absolute; top: 34.1%;right:0.5%",
                 actionButton("InfoBackPrev",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                 tippy_this(elementId = "InfoBackPrev", tooltip = InfoBackPrevText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
          )),
          
          conditionalPanel(condition = "input.dark_mode == 1",
-                          column(12, align = "right",style = "position: absolute; top: 39.3%;right:0.5%",
+                          column(12, align = "right",style = "position: absolute; top: 34.1%;right:0.5%",
                                  actionButton("InfoBackPrev_DM",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                                  tippy_this(elementId = "InfoBackPrev_DM", tooltip = InfoBackPrevText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
                           )),
@@ -200,34 +202,53 @@ shinyUI(fluidPage(
          
          
          conditionalPanel(condition = "input.dark_mode == 0",
-         column(12, align = "right",style = "position: absolute; top: 53.9%;right:0.5%", 
+         column(12, align = "right",style = "position: absolute; top: 46.8%;right:0.5%", 
                 actionButton("InfoRnum",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                 tippy_this(elementId = "InfoRnum", tooltip = InfoRnumText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
          )),
          
          conditionalPanel(condition = "input.dark_mode == 1",
-                          column(12, align = "right",style = "position: absolute; top: 53.9%;right:0.5%", 
+                          column(12, align = "right",style = "position: absolute; top: 46.8%;right:0.5%", 
                                  actionButton("InfoRnum_DM",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                                  tippy_this(elementId = "InfoRnum_DM", tooltip = InfoRnumText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
                           )),
             
             sliderInput("Rlider","R number:", min = 0,
-              max = 3, value = 1, step = 0.1),
+              max = 10, value = 1, step = 0.1),
          
          conditionalPanel(condition = "input.dark_mode == 0",
-         column(12, align = "right",style = "position: absolute; top: 68.2%;right:0.5%", 
+         column(12, align = "right",style = "position: absolute; top: 59.5%;right:0.5%", 
                 actionButton("InfoSympt",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                 tippy_this(elementId = "InfoSympt", tooltip = InfoSymptText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
          )),
          
          conditionalPanel(condition = "input.dark_mode == 1",
-                          column(12, align = "right",style = "position: absolute; top: 68.2%;right:0.5%", 
+                          column(12, align = "right",style = "position: absolute; top: 59.5%;right:0.5%", 
                                  actionButton("InfoSympt_DM",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                                  tippy_this(elementId = "InfoSympt_DM", tooltip = InfoSymptText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
                           )),
             
             sliderInput( "SymptSlider", "Probability of symptomatic infections (%):",
               min = 0,  max = 100, value = 30 ),
+         
+         
+         conditionalPanel(condition = "input.dark_mode == 0",
+                          column(12, align = "right",style = "position: absolute; top: 72.2%;right:0.5%", 
+                                 actionButton("InfoImmune",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
+                                 tippy_this(elementId = "InfoImmune", tooltip = InfoImmuneText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
+                          )),
+         
+         conditionalPanel(condition = "input.dark_mode == 1",
+                          column(12, align = "right",style = "position: absolute; top: 72.2%;right:0.5%", 
+                                 actionButton("InfoImmune_DM",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
+                                 tippy_this(elementId = "InfoImmune_DM", tooltip = InfoImmuneText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
+                          )),
+         
+         
+         
+         
+         sliderInput( "PerImmuneSlider", "Percentage of immune agents (%):",
+                      min = 0,  max = 100, value = 0 ),
          
          
          fluidRow(
@@ -242,13 +263,13 @@ shinyUI(fluidPage(
                   ),
            
            conditionalPanel(condition = "input.dark_mode == 0",
-           column(2, align = "right",style = "position: absolute;top: 82.7%; right:1%",
+           column(2, align = "right",style = "position: absolute;top: 85.1%; right:1%",
                   actionButton("InfoCurrentData",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                   tippy_this(elementId = "InfoCurrentData", tooltip = InfoCurrentDataText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
                   )),
            
            conditionalPanel(condition = "input.dark_mode == 1",
-                            column(2, align = "right",style = "position: absolute;top: 82.7%; right:1%",
+                            column(2, align = "right",style = "position: absolute;top: 85%; right:1%",
                                    actionButton("InfoCurrentData_DM",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                                    tippy_this(elementId = "InfoCurrentData_DM", tooltip = InfoCurrentDataText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
                             ))
@@ -267,7 +288,7 @@ shinyUI(fluidPage(
                   ),
            
            conditionalPanel(condition = "input.dark_mode == 0",
-           column(2,align = "right",style = "position: absolute;top: 88.2%; right:1%",
+           column(2,align = "right",style = "position: absolute;top: 89.8%; right:1%",
                   actionButton("InfoRecover",label=NULL,icon = icon("info-circle") , style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                   tippy_this(elementId = "InfoRecover", tooltip = InfoRecoverText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
                   
@@ -275,7 +296,7 @@ shinyUI(fluidPage(
                   )),
            
            conditionalPanel(condition = "input.dark_mode == 1",
-                            column(2,align = "right",style = "position: absolute;top: 88.2%; right:1%",
+                            column(2,align = "right",style = "position: absolute;top: 89.8%; right:1%",
                                    actionButton("InfoRecover_DM",label=NULL,icon = icon("info-circle") , style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"),
                                    tippy_this(elementId = "InfoRecover_DM", tooltip = InfoRecoverText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
                                    
@@ -297,14 +318,14 @@ shinyUI(fluidPage(
                   ),
            
            conditionalPanel(condition = "input.dark_mode == 0",
-           column(2,align = "right",style = "position: absolute;top: 93.5%; right:1%",
+           column(2,align = "right",style = "position: absolute;top: 94.5%; right:1%",
                   actionButton("InfoPrevBool",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"), 
                   tippy_this(elementId = "InfoPrevBool", tooltip = InfoPrevBoolText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='lightMode',trigger = 'click')
                   
                   )),
            
            conditionalPanel(condition = "input.dark_mode == 1",
-                            column(2,align = "right",style = "position: absolute;top: 93.5%; right:1%",
+                            column(2,align = "right",style = "position: absolute;top: 94.5%; right:1%",
                                    actionButton("InfoPrevBool_DM",label=NULL,icon = icon("info-circle"), style = "padding:0.5%;background: #66000000;border: 0px;margin-bottom: 0px;font-size: 20px"), 
                                    tippy_this(elementId = "InfoPrevBool_DM", tooltip = InfoPrevBoolText, arrow = TRUE,placement = 'top',inertia =  TRUE,theme='darkMode',trigger = 'click')
                                    
