@@ -500,21 +500,20 @@ shinyServer(function(input, output, session) {
           SymptFlag = 1;
         }
 
-        #mask and ventilation combinations - THESE VALUES NEED UPDATING FROM CFD PROJECT
-      
+        #mask and ventilation combinations - See Moore et al. 2021 for Low activity infection probabilities
         if (input$MaskCheck &&input$GoodVentilationCheck){
-            Cc = 9;
-            R = R/10;
+            Cc = 1.51;
+            R = R/7;
         }
         else if (input$MaskCheck && !input$GoodVentilationCheck){
-            Cc = 2;
+            Cc = 5.2;
             R = R/2;
         }
         else if (!input$MaskCheck && input$GoodVentilationCheck){
-            Cc = 9;
-            R = R/5;
+            Cc = 1.47;
+            R = R/3.5;
         } else{
-            Cc = 2;
+            Cc = 3.98;
             R = R;
         }
         
