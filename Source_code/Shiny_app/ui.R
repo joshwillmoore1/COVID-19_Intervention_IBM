@@ -15,17 +15,7 @@ shinyUI(fluidPage(
   useShinyalert(),
   useShinyjs(),
   
-  #for google tracking
-  tags$head(HTML(
-    "<script async src='https://www.googletagmanager.com/gtag/js?id=G-HMEHLW3KFP'></script>
-     <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
 
-        gtag('config', 'G-HMEHLW3KFP');
-     </script>"
-  )),
   
   #this is for the tippy colors
   includeCSS("TippyLightMode.css"),
